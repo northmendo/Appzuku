@@ -16,9 +16,9 @@ Shappky, short for Shell App Killer, is an app that stops background application
 - **Select Specific Apps**: Choose which apps to stop based on user preference.
 ## Screenshots
 <p align="center">
+  <img src="https://github.com/YasserNull/shappky/blob/main/docs/images/screenshot0.jpg" width="30%">
   <img src="https://github.com/YasserNull/shappky/blob/main/docs/images/screenshot1.jpg" width="30%">
-  <img src="https://raw.githubusercontent.com/YasserNull/shappky/refs/heads/main/docs/images/screenshot1.jpg?token=GHSAT0AAAAAADBCYPTJP3H37EOI5QF7QT7Q2BLBMXQ" width="30%">
-  <img src="https://raw.githubusercontent.com/YasserNull/shappky/refs/heads/main/docs/images/screenshot2.jpg?token=GHSAT0AAAAAADBCYPTILSI6SSGJ5DE4UYUU2BLBLRQ" width="30%">
+  <img src="https://github.com/YasserNull/shappky/blob/main/docs/images/screenshot2.jpg" width="30%">
 </p>
 
 ## Requirements
