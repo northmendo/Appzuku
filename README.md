@@ -6,6 +6,8 @@
   <img src="https://img.shields.io/badge/License-GPLv3-blue.svg"/>
 </p>
 
-![Screenshot](https://github.com/YasserNull/shappky/blob/main/docs/images/screenshot0.jpg) 
-![Screenshot](https://github.com/YasserNull/shappky/blob/main/docs/images/screenshot1.jpg) 
-![Screenshot](https://github.com/YasserNull/shappky/blob/main/docs/images/screenshot2.jpg) 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/YasserNull/shappky/main/docs/images/screenshot0.jpg" width="30%">
+  <img src="https://raw.githubusercontent.com/YasserNull/shappky/main/docs/images/screenshot1.jpg" width="30%">
+  <img src="https://raw.githubusercontent.com/YasserNull/shappky/main/docs/images/screenshot2.jpg" width="30%">
+</p>
