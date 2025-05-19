@@ -1,10 +1,6 @@
 # Shappky
 ![Logo](https://github.com/YasserNull/shappky/blob/main/docs/images/logo.png)
-<p align="center">
-  <img src="https://img.shields.io/github/downloads/YasserNull/shappky/total?label=Downloads"/>
-  <img src="https://img.shields.io/github/v/release/YasserNull/shappky?include_prereleases&label=Release"/>
-  <img src="https://img.shields.io/badge/License-GPLv3-blue.svg"/>
-</p>
+
 
 ## What is Shappky?
 Shappky, short for Shell App Killer, is an app that stops background applications using Shizuku permissions, improving device performance, reducing memory usage, and lowering heat in a lightweight and safe way.
