@@ -8,11 +8,11 @@ android {
 
     defaultConfig {
         applicationId "com.yn.shappky"
-        minSdk 24
+        minSdk 23
         targetSdk 33
         versionCode 1
         versionName "1.0"
-
+        multiDexEnabled = true
         vectorDrawables {
             useSupportLibrary true
         }
@@ -20,8 +20,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
         }
     }
     
