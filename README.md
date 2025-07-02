@@ -22,7 +22,7 @@ Shappky, short for Shell App Killer, is an app that stops background application
 </p>
 
 ## Requirements
-- **Android Version**: 7.0 (Nougat) or higher.
+- **Android Version**: 6.0 or higher.
 - **Shizuku**: Must be installed and configured to grant shell permissions.
 ## Installation
 You can download and install Shappky via one of the following methods:
