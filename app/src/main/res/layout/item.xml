@@ -14,7 +14,7 @@
         android:layout_height="60dp"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        background="@drawable/list_item_background"
+                android:background="@drawable/list_item_background"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
