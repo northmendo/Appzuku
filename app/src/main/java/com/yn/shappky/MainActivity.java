@@ -218,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
             }
             loadBackgroundApps();
             return true;
-        } else if (itemId == R.id.action_app_filter) {
+        } else if (itemId == R.id.action_apps_filter) {
             showFilterDialog(); 
             return true;
         } else if (itemId == R.id.action_donate) {
