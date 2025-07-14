@@ -3,6 +3,7 @@ package com.yn.shappky;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -32,6 +33,9 @@ import rikka.shizuku.Shizuku;
 
 public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
+    private SharedPreferences sharedpreferences;
+    private static final String PREFERENCES_NAME = "AppPreferences";
+    private static final String KEY_SHOW_SYSTEM_APPS = "showSystemApps";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private ShellManager shellManager; 
@@ -66,9 +70,15 @@ public class MainActivity extends AppCompatActivity {
         ramMonitor = new RamMonitor(handler, binding.ramUsage, binding.ramUsageText);
         listAdapter = new BackgroundAppsAdapter(this, appsDataList);
         binding.listview1.setAdapter(listAdapter);
+        
         // Configure listeners
         setupListeners();
-
+        
+        // Initialize SharedPreferences
+       sharedpreferences = getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
+       boolean showSystemApps = sharedpreferences.getBoolean(KEY_SHOW_SYSTEM_APPS, false);
+       appManager.setShowSystemApps(showSystemApps);
+       
         // Initialize Shizuku and load apps
         shellManager.setShizukuPermissionListener(shizukuPermissionListener);
         shellManager.checkShellPermissions();
@@ -136,9 +146,9 @@ public class MainActivity extends AppCompatActivity {
     private void updateSelectMenuVisibility() {
        boolean hasSelection = appsDataList.stream().anyMatch(AppModel::isSelected);       
        if (hasSelection) {
-       	binding.fab.show();
+               binding.fab.show();
        } else {
-       	binding.fab.hide();
+               binding.fab.hide();
        } 
         if (selectAllItem != null && unselectAllItem != null) {
             selectAllItem.setVisible(!hasSelection);
@@ -149,14 +159,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-
+        MenuItem showSystemItem = menu.findItem(R.id.action_show_system);
+        if (showSystemItem != null) {
+           boolean savedState = sharedpreferences.getBoolean(KEY_SHOW_SYSTEM_APPS, false);
+           showSystemItem.setChecked(savedState);
+        }
         selectAllItem = menu.findItem(R.id.action_select_all);
         unselectAllItem = menu.findItem(R.id.action_unselect_all);
 
         View selectView = selectAllItem.getActionView();
         View unselectView = unselectAllItem.getActionView();
         unselectAllItem.setVisible(false);
-         
+
         if (selectView != null) {
             ImageButton selectBtn = selectView.findViewById(R.id.select_all_action);
             selectBtn.setOnClickListener(v -> {
@@ -185,8 +199,10 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int itemId = item.getItemId();
         if (itemId == R.id.action_show_system) {
-            item.setChecked(!item.isChecked());
-            appManager.setShowSystemApps(item.isChecked());
+        	boolean newState = !item.isChecked();
+            item.setChecked(newState);
+            appManager.setShowSystemApps(newState);
+            sharedpreferences.edit().putBoolean(KEY_SHOW_SYSTEM_APPS, newState).apply();
             for (AppModel app : appsDataList) {
                 app.setSelected(false);
             }
