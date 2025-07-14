@@ -13,6 +13,10 @@
         android:checked="false"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_donate"
+        android:title="Donate"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_github"
         android:title="Source Code"
         app:showAsAction="never" />
