@@ -4,5 +4,5 @@
     android:layout_height="32dp"
     android:background="?attr/selectableItemBackgroundBorderless"
     android:scaleType="centerInside"
-    android:src="@drawable/ic_force_stop"
+    android:src="@drawable/ic_unselect_all"
     android:padding="2dp" />
