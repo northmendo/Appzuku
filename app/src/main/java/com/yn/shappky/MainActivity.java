@@ -12,11 +12,19 @@ import android.os.Looper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.LayoutInflater;
 import android.widget.ImageButton;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.Color;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.yn.shappky.adapter.BackgroundAppsAdapter;
+import com.yn.shappky.adapter.FilterAppsAdapter;
 import com.yn.shappky.databinding.ActivityMainBinding;
 import com.yn.shappky.model.AppModel;
 import com.yn.shappky.util.BackgroundAppManager;
@@ -25,6 +33,8 @@ import com.yn.shappky.util.ShellManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -208,16 +218,60 @@ public class MainActivity extends AppCompatActivity {
             }
             loadBackgroundApps();
             return true;
+        } else if (itemId == R.id.action_app_filter) {
+            showFilterDialog(); 
+            return true;
         } else if (itemId == R.id.action_donate) {
             openUrl("https://www.paypal.com/ncp/payment/7X44EWSM9KAVW");
             return true;
-        } else if (itemId == R.id.action_github) {
+        }  if (itemId == R.id.action_github) {
             openUrl("https://github.com/YasserNull/shappky");
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
+    private void showFilterDialog() {
+        LayoutInflater inflater = this.getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_filter, null);
+        ListView listView = dialogView.findViewById(R.id.filter_list_view);
+        ProgressBar progressBar = dialogView.findViewById(R.id.filter_loading_progress);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("Select the apps you want to hide")
+                .setView(dialogView);
+
+        AlertDialog filterDialog = builder.create();
+        filterDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#17181C")));
+
+        filterDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancel", (dialog, which) -> dialog.dismiss());
+        filterDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Save", (dialog, which) -> {});
+
+        progressBar.setVisibility(View.VISIBLE);
+        listView.setVisibility(View.GONE);
+        filterDialog.show();
+
+        filterDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
+        filterDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+
+        appManager.loadAllApps(allApps -> {
+            Set<String> hiddenApps = appManager.getHiddenApps();
+            FilterAppsAdapter filterAdapter = new FilterAppsAdapter(this, allApps, hiddenApps);
+            listView.setAdapter(filterAdapter);
+            listView.setOnItemClickListener(null);
+
+            progressBar.setVisibility(View.GONE);
+            listView.setVisibility(View.VISIBLE);
+
+            filterDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Save", (dialog, which) -> {
+                Set<String> packagesToHide = filterAdapter.getSelectedPackages();
+                appManager.saveHiddenApps(packagesToHide);
+                loadBackgroundApps();
+            });
+            filterDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+        });
+    }
+    
     // Open URL in browser
     private void openUrl(String url) {
         try {
