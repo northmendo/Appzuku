@@ -118,7 +118,7 @@ public class BackgroundAppsAdapter extends BaseAdapter {
         }
 
         // Update background and button visibility based on selection
-        itemBinding.linear1.setBackgroundColor(app.isSelected() ? selectedColor : defaultColor);
+        itemBinding.linear1.setSelected(app.isSelected()); 
         itemBinding.imageview2.setVisibility(app.isSelected() ? View.GONE : View.VISIBLE);
 
         return convertView;
