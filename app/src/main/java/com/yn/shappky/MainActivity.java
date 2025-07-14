@@ -39,7 +39,9 @@ public class MainActivity extends AppCompatActivity {
     private RamMonitor ramMonitor;
     private BackgroundAppsAdapter listAdapter;
     private final List<AppModel> appsDataList = new ArrayList<>();
-
+    private MenuItem selectAllItem;
+    private MenuItem unselectAllItem;
+    
     // Handle Shizuku permission results
     private final Shizuku.OnRequestPermissionResultListener permissionListener = (requestCode, grantResult) -> {
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
@@ -64,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         ramMonitor = new RamMonitor(handler, binding.ramUsage, binding.ramUsageText);
         listAdapter = new BackgroundAppsAdapter(this, appsDataList);
         binding.listview1.setAdapter(listAdapter);
-
+        unselectAllItem.setVisible(false);
         // Configure listeners
         setupListeners();
 
@@ -85,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
                 AppModel clickedApp = appsDataList.get(position);
                 clickedApp.setSelected(!clickedApp.isSelected());
                 listAdapter.notifyDataSetChanged();
+                updateSelectMenuVisibility(); 
             }
         });
     }
@@ -102,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
             appsDataList.addAll(result);
             binding.runningApps.setText("Running apps: " + appsDataList.size());
             listAdapter.notifyDataSetChanged();
+            updateSelectMenuVisibility(); 
             binding.swiperefreshlayout1.setRefreshing(false);
         });
     }
@@ -129,18 +133,44 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Toggle between "Select All" and "Unselect All" based on whether any item is selected
+    private void updateSelectMenuVisibility() {
+       boolean hasSelection = appsDataList.stream().anyMatch(AppModel::isSelected);       
+        if (selectAllItem != null && unselectAllItem != null) {
+            selectAllItem.setVisible(!hasSelection);
+            unselectAllItem.setVisible(hasSelection);
+         }
+    }
+    
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-        MenuItem item = menu.findItem(R.id.action_select_all);
-        View actionView = item.getActionView();
-        if (actionView != null) {
-            ImageButton btnAction = actionView.findViewById(R.id.btn_action);
-            btnAction.setOnClickListener(v -> {
+        
+        selectAllItem = menu.findItem(R.id.action_select_all);
+        unselectAllItem = menu.findItem(R.id.action_unselect_all);
+        
+        View selectView = selectAllItem.getActionView();
+        View unselectView = unselectAllItem.getActionView();
+        
+        if (selectView != null) {
+            ImageButton selectBtn = selectView.findViewById(R.id.select_all_action);
+            selectBtn.setOnClickListener(v -> {
                 for (AppModel app : appsDataList) {
                     app.setSelected(true);
                 }
-                v.postDelayed(() -> listAdapter.notifyDataSetChanged(), 200);
+                listAdapter.notifyDataSetChanged();
+                updateSelectMenuVisibility(); 
+            });
+        }
+        
+        if (unselectView != null) {
+        	ImageButton unselectBtn = unselectView.findViewById(R.id.unselect_all_action);
+            unselectBtn.setOnClickListener(v -> {
+            	for (AppModel app : appsDataList) {
+            	     app.setSelected(false);
+                } 
+                listAdapter.notifyDataSetChanged();
+                updateSelectMenuVisibility(); 
             });
         }
         return true;
