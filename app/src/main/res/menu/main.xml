@@ -2,10 +2,15 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-    android:id="@+id/action_select_all"
-    android:title="Action"
-    app:showAsAction="always"
-    app:actionLayout="@layout/ripple_action" />
+      android:id="@+id/action_select_all"
+      android:title="Select all"
+      app:showAsAction="ifRoom"
+      app:actionLayout="@layout/select_all_action" />
+    <item
+       android:id="@+id/action_unselect_all"
+      android:title="Unselect all"
+      app:showAsAction="ifRoom"
+      app:actionLayout="@layout/unselect_all_action" />
     <item
         android:id="@+id/action_show_system"
         android:title="Show system apps"
