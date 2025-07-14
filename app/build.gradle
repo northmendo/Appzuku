@@ -4,14 +4,15 @@ plugins {
 
 android {
     namespace 'com.yn.shappky'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.yn.shappky"
         minSdk 23
-        targetSdk 33
-        versionCode 2
-        versionName "1.0.1"
+        targetSdk 34
+        buildToolsVersion "34.0.4"
+        versionCode 3
+        versionName "1.1.0"
         multiDexEnabled = true
         vectorDrawables {
             useSupportLibrary true
