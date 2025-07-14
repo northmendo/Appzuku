@@ -167,6 +167,9 @@ public class MainActivity extends AppCompatActivity {
             }
             loadBackgroundApps();
             return true;
+        } else if (itemId == R.id.action_donate) {
+            openUrl("https://www.paypal.com/ncp/payment/7X44EWSM9KAVW");
+            return true;
         } else if (itemId == R.id.action_github) {
             openUrl("https://github.com/YasserNull/shappky");
             return true;
