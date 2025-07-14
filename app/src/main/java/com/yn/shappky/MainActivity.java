@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private final List<AppModel> appsDataList = new ArrayList<>();
     private MenuItem selectAllItem;
     private MenuItem unselectAllItem;
-    
+
     // Handle Shizuku permission results
     private final Shizuku.OnRequestPermissionResultListener permissionListener = (requestCode, grantResult) -> {
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
@@ -66,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
         ramMonitor = new RamMonitor(handler, binding.ramUsage, binding.ramUsageText);
         listAdapter = new BackgroundAppsAdapter(this, appsDataList);
         binding.listview1.setAdapter(listAdapter);
-        unselectAllItem.setVisible(false);
         // Configure listeners
         setupListeners();
 
@@ -118,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
                 .collect(Collectors.toList());
 
         // Hide FAB
-        binding.fab.setVisibility(View.GONE);
+        binding.fab.hide();
 
         // Clear selection
         for (AppModel app : appsDataList) {
@@ -129,29 +128,35 @@ public class MainActivity extends AppCompatActivity {
         // Kill apps and show FAB on completion
         appManager.killPackages(packagesToKill, () -> {
             loadBackgroundApps();
-            binding.fab.setVisibility(View.VISIBLE);
+            binding.fab.show();
         });
     }
 
     // Toggle between "Select All" and "Unselect All" based on whether any item is selected
     private void updateSelectMenuVisibility() {
        boolean hasSelection = appsDataList.stream().anyMatch(AppModel::isSelected);       
+       if (hasSelection) {
+       	binding.fab.show();
+       } else {
+       	binding.fab.hide();
+       } 
         if (selectAllItem != null && unselectAllItem != null) {
             selectAllItem.setVisible(!hasSelection);
             unselectAllItem.setVisible(hasSelection);
          }
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-        
+
         selectAllItem = menu.findItem(R.id.action_select_all);
         unselectAllItem = menu.findItem(R.id.action_unselect_all);
-        
+
         View selectView = selectAllItem.getActionView();
         View unselectView = unselectAllItem.getActionView();
-        
+        unselectAllItem.setVisible(false);
+         
         if (selectView != null) {
             ImageButton selectBtn = selectView.findViewById(R.id.select_all_action);
             selectBtn.setOnClickListener(v -> {
@@ -162,12 +167,12 @@ public class MainActivity extends AppCompatActivity {
                 updateSelectMenuVisibility(); 
             });
         }
-        
+
         if (unselectView != null) {
-        	ImageButton unselectBtn = unselectView.findViewById(R.id.unselect_all_action);
+                ImageButton unselectBtn = unselectView.findViewById(R.id.unselect_all_action);
             unselectBtn.setOnClickListener(v -> {
-            	for (AppModel app : appsDataList) {
-            	     app.setSelected(false);
+                    for (AppModel app : appsDataList) {
+                         app.setSelected(false);
                 } 
                 listAdapter.notifyDataSetChanged();
                 updateSelectMenuVisibility(); 
