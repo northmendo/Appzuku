@@ -12,7 +12,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -44,10 +43,7 @@ public class MainActivity extends AppCompatActivity {
     // Handle Shizuku permission results
     private final Shizuku.OnRequestPermissionResultListener permissionListener = (requestCode, grantResult) -> {
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
-            runOnUiThread(() -> Toast.makeText(this, "Shizuku permission granted", Toast.LENGTH_SHORT).show());
             loadBackgroundApps();
-        } else {
-            runOnUiThread(() -> Toast.makeText(this, "Shizuku permission denied", Toast.LENGTH_SHORT).show());
         }
     };
 
@@ -117,11 +113,6 @@ public class MainActivity extends AppCompatActivity {
                 .map(AppModel::getPackageName)
                 .collect(Collectors.toList());
 
-        if (packagesToKill.isEmpty()) {
-            Toast.makeText(this, "No apps selected to kill", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         // Hide FAB
         binding.fab.setVisibility(View.GONE);
 
@@ -135,7 +126,6 @@ public class MainActivity extends AppCompatActivity {
         appManager.killPackages(packagesToKill, () -> {
             loadBackgroundApps();
             binding.fab.setVisibility(View.VISIBLE);
-            Toast.makeText(this, "Attempted to kill " + packagesToKill.size() + " selected apps", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -181,9 +171,7 @@ public class MainActivity extends AppCompatActivity {
     private void openUrl(String url) {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-        } catch (Exception e) {
-            Toast.makeText(this, "Failed to open URL", Toast.LENGTH_SHORT).show();
-        }
+        } catch (Exception e) {}
     }
 
     @Override
