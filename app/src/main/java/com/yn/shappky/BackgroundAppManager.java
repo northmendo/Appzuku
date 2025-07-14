@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.provider.Settings;
 import android.widget.Toast;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -33,12 +35,16 @@ public class BackgroundAppManager {
     private final ShellManager shellManager;
     private final List<AppModel> currentAppsList = new ArrayList<>();
     private boolean showSystemApps = false;
-
+    private SharedPreferences sharedpreferences;
+    private static final String PREFERENCES_NAME = "AppPreferences";
+    private static final String KEY_HIDDEN_APPS = "hidden_apps";
+    
     public BackgroundAppManager(Context context, Handler handler, ExecutorService executor, ShellManager shellManager) {
         this.context = context;
         this.handler = handler;
         this.executor = executor;
         this.shellManager = shellManager;
+        this.sharedpreferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
     }
 
     // Load background apps using 'ps' command via Shizuku
@@ -47,7 +53,8 @@ public class BackgroundAppManager {
             List<AppModel> result = new ArrayList<>();
             PackageManager packageManager = context.getPackageManager();
             Set<String> runningPackagesFromPs = new HashSet<>();
-
+            Set<String> hiddenApps = getHiddenApps();
+            
             // Get current keyboard package
             String currentKeyboardPackage = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
             if (currentKeyboardPackage != null && currentKeyboardPackage.contains("/")) {
@@ -94,7 +101,8 @@ public class BackgroundAppManager {
                     if (packageName.equals("com.yn.shappky") ||
                         packageName.equals("com.android.systemui") ||
                         packageName.equals(currentKeyboardPackage) ||
-                        packageName.equals(currentLauncherPackage)) {
+                        packageName.equals(currentLauncherPackage) ||
+                        hiddenApps.contains(packageName)) {
                         continue;
                     }
 
@@ -113,7 +121,11 @@ public class BackgroundAppManager {
                     ));
                 } catch (PackageManager.NameNotFoundException ignored) {}
             }
-
+            Collections.sort(result, (a1, a2) -> {
+            	if (!a1.isSystemApp() && a2.isSystemApp()) return -1;
+                if (a1.isSystemApp() && !a2.isSystemApp()) return 1;
+                return a1.getAppName().compareToIgnoreCase(a2.getAppName());
+             });
             // Update UI with results
             handler.post(() -> {
                 currentAppsList.clear();
@@ -125,6 +137,39 @@ public class BackgroundAppManager {
         }); 
     } 
 
+   // Load all installed applications
+   public void loadAllApps(Consumer<List<AppModel>> callback) {
+        executor.execute(() -> {
+            PackageManager pm = context.getPackageManager();
+            List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+            List<AppModel> allApps = new ArrayList<>();
+            for (ApplicationInfo appInfo : packages) {
+                if (appInfo.packageName.equals(context.getPackageName())) {
+                    continue; // Skip our own app
+                }
+                boolean isSystem = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                allApps.add(new AppModel(
+                        pm.getApplicationLabel(appInfo).toString(),
+                        appInfo.packageName,
+                        pm.getApplicationIcon(appInfo),
+                        isSystem
+                ));
+            }
+            // Sort alphabetically
+            Collections.sort(allApps, (a1, a2) -> a1.getAppName().compareToIgnoreCase(a2.getAppName()));
+            handler.post(() -> callback.accept(allApps));
+        });
+    }
+    
+   // Get the set of hidden app package names
+    public Set<String> getHiddenApps() {
+        return sharedpreferences.getStringSet(KEY_HIDDEN_APPS, new HashSet<>());
+    }
+
+    // Save the set of hidden app package names
+    public void saveHiddenApps(Set<String> hiddenApps) {
+        sharedpreferences.edit().putStringSet(KEY_HIDDEN_APPS, hiddenApps).apply();
+    }
     // Kill specified packages using shell
     public void killPackages(List<String> packageNames, Runnable onComplete) {
         if (!shellManager.hasAnyShellPermission()) {
