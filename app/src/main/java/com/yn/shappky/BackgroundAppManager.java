@@ -10,9 +10,11 @@ import android.provider.Settings;
 import android.widget.Toast;
 
 import com.yn.shappky.model.AppModel;
+import com.yn.shappky.util.ShellManager; 
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.StringReader; 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -28,15 +30,15 @@ public class BackgroundAppManager {
     private final Context context;
     private final Handler handler;
     private final ExecutorService executor;
-    private final ShizukuManager shizukuManager;
+    private final ShellManager shellManager;
     private final List<AppModel> currentAppsList = new ArrayList<>();
     private boolean showSystemApps = false;
 
-    public BackgroundAppManager(Context context, Handler handler, ExecutorService executor, ShizukuManager shizukuManager) {
+    public BackgroundAppManager(Context context, Handler handler, ExecutorService executor, ShellManager shellManager) {
         this.context = context;
         this.handler = handler;
         this.executor = executor;
-        this.shizukuManager = shizukuManager;
+        this.shellManager = shellManager;
     }
 
     // Load background apps using 'ps' command via Shizuku
@@ -59,33 +61,33 @@ public class BackgroundAppManager {
             String currentLauncherPackage = (resolveInfo != null && resolveInfo.activityInfo != null)
                     ? resolveInfo.activityInfo.packageName : null;
 
-            // Execute Shizuku command to get running processes
-            try {
-                if (shizukuManager.hasShizukuPermission()) {
-                    String[] command = {"sh", "-c", "ps -A  | grep '.' | awk '{print $NF}' | sed 's/:.*//'"};
-                    ShizukuRemoteProcess process = Shizuku.newProcess(command, null, null);
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        String packageName = line.trim();
-                        if (packageName.isEmpty() || !packageName.contains(".")) {
-                            continue;
-                        }
-                        try {
-                            packageManager.getApplicationInfo(packageName, 0);
-                            runningPackagesFromPs.add(packageName);
-                        } catch (PackageManager.NameNotFoundException ignored) {}
-                    }
-                    reader.close();
-                    process.waitFor();
-                    process.destroy();
-                } else {
-                    handler.post(() -> Toast.makeText(context, "Shizuku permission required to list running apps", Toast.LENGTH_SHORT).show());
-                }
-            } catch (Exception e) {
-                handler.post(() -> Toast.makeText(context, "Error getting running apps", Toast.LENGTH_SHORT).show());
-            }
-
+            // Execute shell command to get running processes
+            
+            if (shellManager.hasAnyShellPermission()) { 
+                String command = "ps -A | grep '\\.' | sed 's/.* //; s/:.*//'";
+                try {
+                    String fullOutput = shellManager.runShellCommandAndGetFullOutput(command);
+                    if (fullOutput != null) {
+                        BufferedReader reader = new BufferedReader(new StringReader(fullOutput));
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            String packageName = line.trim();
+                            if (!packageName.isEmpty() && packageName.contains(".") && !packageName.startsWith("ERROR:")) {
+                                try {
+                                    packageManager.getApplicationInfo(packageName, 0);
+                                    runningPackagesFromPs.add(packageName);
+                               } catch (PackageManager.NameNotFoundException ignored) {}
+                           }
+                       }
+                       reader.close();
+                   } else {
+                       handler.post(() -> Toast.makeText(context, "Failed to get running apps output", Toast.LENGTH_SHORT).show());
+                   }
+               } catch (Exception e) {
+                   handler.post(() -> Toast.makeText(context, "Error getting running apps: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+               }
+            } 
+            
             // Process running packages
             for (String packageName : runningPackagesFromPs) {
                 try {
@@ -120,14 +122,13 @@ public class BackgroundAppManager {
                     callback.accept(new ArrayList<>(result));
                 }
             });
-        });
-    }
+        }); 
+    } 
 
-    // Kill specified packages using Shizuku
+    // Kill specified packages using shell
     public void killPackages(List<String> packageNames, Runnable onComplete) {
-        if (!shizukuManager.hasShizukuPermission()) {
-            handler.post(() -> Toast.makeText(context, "Shizuku permission required", Toast.LENGTH_SHORT).show());
-            shizukuManager.checkShizuku();
+        if (!shellManager.hasAnyShellPermission()) {
+            shellManager.checkShellPermissions();
             if (onComplete != null) {
                 handler.post(onComplete);
             }
@@ -144,14 +145,13 @@ public class BackgroundAppManager {
         String command = packageNames.stream()
                 .map(pkg -> "am force-stop " + pkg)
                 .collect(Collectors.joining("; "));
-        shizukuManager.runShellCommand(command, onComplete);
+        shellManager.runShellCommand(command, onComplete);
     }
 
     // Kill a single app by package name
     public void killApp(String packageName, Runnable onComplete) {
-        if (!shizukuManager.hasShizukuPermission()) {
-            handler.post(() -> Toast.makeText(context, "Shizuku permission required", Toast.LENGTH_SHORT).show());
-            shizukuManager.checkShizuku();
+        if (!shellManager.hasAnyShellPermission()) { 
+            shellManager.checkShellPermissions(); 
             if (onComplete != null) {
                 handler.post(onComplete);
             }
@@ -163,7 +163,7 @@ public class BackgroundAppManager {
             }
             return;
         }
-        shizukuManager.runShellCommand("am force-stop " + packageName, onComplete);
+        shellManager.runShellCommand("am force-stop " + packageName, onComplete); 
     }
 
     // Toggle visibility of system apps
