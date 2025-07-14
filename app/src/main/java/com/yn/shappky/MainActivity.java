@@ -20,7 +20,7 @@ import com.yn.shappky.databinding.ActivityMainBinding;
 import com.yn.shappky.model.AppModel;
 import com.yn.shappky.util.BackgroundAppManager;
 import com.yn.shappky.util.RamMonitor;
-import com.yn.shappky.util.ShizukuManager;
+import com.yn.shappky.util.ShellManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private ShizukuManager shizukuManager;
+    private ShellManager shellManager; 
     private BackgroundAppManager appManager;
     private RamMonitor ramMonitor;
     private BackgroundAppsAdapter listAdapter;
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private MenuItem unselectAllItem;
 
     // Handle Shizuku permission results
-    private final Shizuku.OnRequestPermissionResultListener permissionListener = (requestCode, grantResult) -> {
+    private final Shizuku.OnRequestPermissionResultListener shizukuPermissionListener = (requestCode, grantResult) -> {
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
             loadBackgroundApps();
         }
@@ -61,8 +61,8 @@ public class MainActivity extends AppCompatActivity {
         getWindow().getDecorView().setBackgroundColor(Color.parseColor("#17181C"));
 
         // Initialize components
-        shizukuManager = new ShizukuManager(this, handler, executor);
-        appManager = new BackgroundAppManager(this, handler, executor, shizukuManager);
+        shellManager = new ShellManager(this, handler, executor);
+        appManager = new BackgroundAppManager(this, handler, executor, shellManager);
         ramMonitor = new RamMonitor(handler, binding.ramUsage, binding.ramUsageText);
         listAdapter = new BackgroundAppsAdapter(this, appsDataList);
         binding.listview1.setAdapter(listAdapter);
@@ -70,8 +70,8 @@ public class MainActivity extends AppCompatActivity {
         setupListeners();
 
         // Initialize Shizuku and load apps
-        shizukuManager.setPermissionListener(permissionListener);
-        shizukuManager.checkShizuku();
+        shellManager.setShizukuPermissionListener(shizukuPermissionListener);
+        shellManager.checkShellPermissions();
         loadBackgroundApps();
         ramMonitor.startMonitoring();
     }
@@ -213,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         // Clean up resources
-        shizukuManager.removePermissionListener();
+        shellManager.removeShizukuPermissionListener();
         executor.shutdownNow();
         handler.removeCallbacksAndMessages(null);
         ramMonitor.stopMonitoring();
