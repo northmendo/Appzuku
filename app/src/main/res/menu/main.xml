@@ -18,8 +18,8 @@
         android:checked="false"
         app:showAsAction="never" />
     <item
-        android:id="@+id/action_app_filter"
-        android:title="App filter"
+        android:id="@+id/action_apps_filter"
+        android:title="Apps filter"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_donate"
