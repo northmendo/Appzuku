@@ -7,9 +7,9 @@
 </p>
 
 ## What is Shappky?
-Shappky, short for Shell App Killer, is an app that stops background applications using Shizuku permissions, improving device performance, reducing memory usage, and lowering heat in a lightweight and safe way.
+Shappky, short for Shell App Killer, is an app that stops background applications using either Shizuku or Root permissions, improving device performance, reducing memory usage, and lowering heat in a lightweight and safe way.
 ## Features
-- **No Root Required**: Operates using Shizuku permissions.
+- **Flexible Permissions**: Works with either Shizuku or Root access.
 - **Simplified User Interface**: Practical and easy-to-use design.
 - **Fast Performance**: Stops applications with high efficiency.
 - **Select System Apps**: Ability to choose system apps for termination.
@@ -23,7 +23,7 @@ Shappky, short for Shell App Killer, is an app that stops background application
 
 ## Requirements
 - **Android Version**: 6.0 or higher.
-- **Shizuku**: Must be installed and configured to grant shell permissions.
+- **Shizuku or Root**: Shappky needs Root or Shizuku permission to work.
 ## Installation
 You can download and install Shappky via one of the following methods:
 **GitHub Releases**: Download the latest APK from the [Releases page](https://github.com/YasserNull/shappky/releases).
