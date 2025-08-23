@@ -54,6 +54,15 @@
                 android:textColor="#CCCCCC"
                 android:textSize="12sp"
                 android:focusable="false" />
+            <TextView
+                android:id="@+id/app_ram"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#CCCCCC"
+                android:textSize="12sp"
+                android:focusable="false" />           
         </LinearLayout>
 
         <LinearLayout
