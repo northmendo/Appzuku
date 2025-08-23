@@ -93,6 +93,7 @@ public class BackgroundAppsAdapter extends BaseAdapter {
 
         itemBinding.appName.setText(app.getAppName());
         itemBinding.appPkg.setText(app.getPackageName());
+        itemBinding.appRam.setText(app.getAppRam());
         itemBinding.appIcon.setImageDrawable(app.getAppIcon());
 
         // Configure the kill button appearance
@@ -124,3 +125,4 @@ public class BackgroundAppsAdapter extends BaseAdapter {
         return convertView;
     }
 }
+
