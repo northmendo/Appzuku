@@ -14,8 +14,7 @@ import com.yn.shappky.model.AppModel;
 import com.yn.shappky.util.ShellManager; 
 
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.StringReader; 
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +25,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import rikka.shizuku.Shizuku;
-import rikka.shizuku.ShizukuRemoteProcess;
 
 public class BackgroundAppManager {
     private final Context context;
@@ -47,6 +45,12 @@ public class BackgroundAppManager {
         this.sharedpreferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
     }
 
+    private String formatMemorySize(long kb) {
+        if (kb < 1024) return kb + " KB";
+        else if (kb < 1024 * 1024) return String.format("%.2f MB", kb / 1024f);
+        else return String.format("%.2f GB", kb / (1024f * 1024f));
+    }
+
     // Load background apps using 'ps' command via Shizuku
     public void loadBackgroundApps(Consumer<List<AppModel>> callback) {
         executor.execute(() -> {
@@ -54,7 +58,7 @@ public class BackgroundAppManager {
             PackageManager packageManager = context.getPackageManager();
             Set<String> runningPackagesFromPs = new HashSet<>();
             Set<String> hiddenApps = getHiddenApps();
-            
+
             // Get current keyboard package
             String currentKeyboardPackage = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
             if (currentKeyboardPackage != null && currentKeyboardPackage.contains("/")) {
@@ -69,34 +73,41 @@ public class BackgroundAppManager {
                     ? resolveInfo.activityInfo.packageName : null;
 
             // Execute shell command to get running processes
-            
-            if (shellManager.hasAnyShellPermission()) { 
-                String command = "ps -A | grep '\\.' | sed 's/.* //; s/:.*//'";
+            if (shellManager.hasAnyShellPermission()) {
+                String command = "ps -A -o rss,name | grep '\\.' | grep -v '[-:@]'";
                 try {
                     String fullOutput = shellManager.runShellCommandAndGetFullOutput(command);
                     if (fullOutput != null) {
                         BufferedReader reader = new BufferedReader(new StringReader(fullOutput));
                         String line;
                         while ((line = reader.readLine()) != null) {
-                            String packageName = line.trim();
-                            if (!packageName.isEmpty() && packageName.contains(".") && !packageName.startsWith("ERROR:")) {
-                                try {
-                                    packageManager.getApplicationInfo(packageName, 0);
-                                    runningPackagesFromPs.add(packageName);
-                               } catch (PackageManager.NameNotFoundException ignored) {}
-                           }
-                       }
-                       reader.close();
-                   } else {
-                       handler.post(() -> Toast.makeText(context, "Failed to get running apps output", Toast.LENGTH_SHORT).show());
-                   }
-               } catch (Exception e) {
-                   handler.post(() -> Toast.makeText(context, "Error getting running apps: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-               }
-            } 
-            
+                            String[] parts = line.trim().split("\\s+");
+                            if (parts.length >= 2) {
+                                String packageName = parts[1].trim();
+                                String appRam = parts[0].trim();
+                                if (!packageName.isEmpty() && packageName.contains(".") && !packageName.startsWith("ERROR:")) {
+                                    try {
+                                        packageManager.getApplicationInfo(packageName, 0);
+                                        runningPackagesFromPs.add(packageName + ":" + appRam); // Store with RAM
+                                    } catch (PackageManager.NameNotFoundException ignored) {}
+                                }
+                            }
+                        }
+                        reader.close();
+                    } else {
+                        handler.post(() -> Toast.makeText(context, "Failed to get running apps output", Toast.LENGTH_SHORT).show());
+                    }
+                } catch (Exception e) {
+                    handler.post(() -> Toast.makeText(context, "Error getting running apps: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                }
+            }
+
             // Process running packages
-            for (String packageName : runningPackagesFromPs) {
+            for (String packageEntry : runningPackagesFromPs) {
+                String[] parts = packageEntry.split(":");
+                String packageName = parts[0];
+                long ramUsage = parts.length > 1 ? Long.parseLong(parts[1]) : 0;
+
                 try {
                     if (packageName.equals("com.yn.shappky") ||
                         packageName.equals("com.android.systemui") ||
@@ -116,16 +127,18 @@ public class BackgroundAppManager {
                     result.add(new AppModel(
                             packageManager.getApplicationLabel(appInfo).toString(),
                             packageName,
+                            formatMemorySize(ramUsage),
                             packageManager.getApplicationIcon(appInfo),
                             isSystemApp
                     ));
                 } catch (PackageManager.NameNotFoundException ignored) {}
             }
             Collections.sort(result, (a1, a2) -> {
-            	if (!a1.isSystemApp() && a2.isSystemApp()) return -1;
+                if (!a1.isSystemApp() && a2.isSystemApp()) return -1;
                 if (a1.isSystemApp() && !a2.isSystemApp()) return 1;
                 return a1.getAppName().compareToIgnoreCase(a2.getAppName());
-             });
+            });
+
             // Update UI with results
             handler.post(() -> {
                 currentAppsList.clear();
@@ -134,11 +147,11 @@ public class BackgroundAppManager {
                     callback.accept(new ArrayList<>(result));
                 }
             });
-        }); 
-    } 
+        });
+    }
 
-   // Load all installed applications
-   public void loadAllApps(Consumer<List<AppModel>> callback) {
+    // Load all installed applications
+    public void loadAllApps(Consumer<List<AppModel>> callback) {
         executor.execute(() -> {
             PackageManager pm = context.getPackageManager();
             List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
@@ -151,6 +164,7 @@ public class BackgroundAppManager {
                 allApps.add(new AppModel(
                         pm.getApplicationLabel(appInfo).toString(),
                         appInfo.packageName,
+                        "-", // RAM placeholder
                         pm.getApplicationIcon(appInfo),
                         isSystem
                 ));
@@ -160,8 +174,8 @@ public class BackgroundAppManager {
             handler.post(() -> callback.accept(allApps));
         });
     }
-    
-   // Get the set of hidden app package names
+
+    // Get the set of hidden app package names
     public Set<String> getHiddenApps() {
         return sharedpreferences.getStringSet(KEY_HIDDEN_APPS, new HashSet<>());
     }
@@ -170,6 +184,7 @@ public class BackgroundAppManager {
     public void saveHiddenApps(Set<String> hiddenApps) {
         sharedpreferences.edit().putStringSet(KEY_HIDDEN_APPS, hiddenApps).apply();
     }
+
     // Kill specified packages using shell
     public void killPackages(List<String> packageNames, Runnable onComplete) {
         if (!shellManager.hasAnyShellPermission()) {
@@ -195,8 +210,8 @@ public class BackgroundAppManager {
 
     // Kill a single app by package name
     public void killApp(String packageName, Runnable onComplete) {
-        if (!shellManager.hasAnyShellPermission()) { 
-            shellManager.checkShellPermissions(); 
+        if (!shellManager.hasAnyShellPermission()) {
+            shellManager.checkShellPermissions();
             if (onComplete != null) {
                 handler.post(onComplete);
             }
@@ -208,7 +223,7 @@ public class BackgroundAppManager {
             }
             return;
         }
-        shellManager.runShellCommand("am force-stop " + packageName, onComplete); 
+        shellManager.runShellCommand("am force-stop " + packageName, onComplete);
     }
 
     // Toggle visibility of system apps
