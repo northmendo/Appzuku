@@ -5,14 +5,16 @@ import android.graphics.drawable.Drawable;
 public class AppModel {
     private String appName;
     private String packageName;
+    private String appRam;
     private Drawable appIcon;
     private boolean isSystemApp;
     private boolean selected;
 
     // Initialize app model
-    public AppModel(String appName, String packageName, Drawable appIcon, boolean isSystemApp) {
+    public AppModel(String appName, String packageName, String appRam, Drawable appIcon, boolean isSystemApp) {
         this.appName = appName;
         this.packageName = packageName;
+        this.appRam = appRam;
         this.appIcon = appIcon;
         this.isSystemApp = isSystemApp;
         this.selected = false;
@@ -34,6 +36,15 @@ public class AppModel {
 
     public void setPackageName(String packageName) {
         this.packageName = packageName;
+    }
+
+    // Get and set app ram usage
+    public String getAppRam() {
+        return appRam;
+    }
+
+    public void setAppRam(String appRam) {
+        this.appRam = appRam;
     }
 
     // Get and set app icon
