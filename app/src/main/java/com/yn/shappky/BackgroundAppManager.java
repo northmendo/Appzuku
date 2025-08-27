@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 import rikka.shizuku.Shizuku;
 
@@ -122,10 +123,10 @@ public class BackgroundAppManager {
 
                     ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
                     
-                    boolean isPersistent = (appInfo.flags & ApplicationInfo.FLAG_PERSISTENT) != 0;
+                    boolean isPersistentApp = (appInfo.flags & ApplicationInfo.FLAG_PERSISTENT) != 0;
                     boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
                     
-                    if (!showSystemApps && isSystemApp || !showPersistentApps && isPersistent) {
+                    if (!showSystemApps && isSystemApp || !showPersistentApps && isPersistentApp) {
                         continue;
                     }
 
@@ -135,18 +136,16 @@ public class BackgroundAppManager {
                             formatMemorySize(ramUsage),
                             packageManager.getApplicationIcon(appInfo),
                             isSystemApp,
-                            isPersistent, 
+                            isPersistentApp, 
                             isProtected
                     ));
                 } catch (PackageManager.NameNotFoundException ignored) {}
             }
-            Collections.sort(result, (a1, a2) -> {
-                if (!a1.isSystemApp() && a2.isSystemApp()) return -1;
-                if (a1.isSystemApp() && !a2.isSystemApp()) return 1;
-                if (!a1.isPersistentApp() && a2.isPersistentApp()) return -1;
-                if (a1.isPersistentApp() && !a2.isPersistentApp()) return 1;
-                return a1.getAppName().compareToIgnoreCase(a2.getAppName());
-            });
+            Collections.sort(result,
+                Comparator.comparing(AppModel::isSystemApp)
+                .thenComparing(AppModel::isPersistentApp)
+                .thenComparing(a -> a.getAppName().toLowerCase())
+            );
 
             // Update UI with results
             handler.post(() -> {
