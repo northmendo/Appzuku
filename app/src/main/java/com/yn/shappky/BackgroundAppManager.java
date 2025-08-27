@@ -33,6 +33,7 @@ public class BackgroundAppManager {
     private final ShellManager shellManager;
     private final List<AppModel> currentAppsList = new ArrayList<>();
     private boolean showSystemApps = false;
+    private boolean showPersistentApps = false;
     private SharedPreferences sharedpreferences;
     private static final String PREFERENCES_NAME = "AppPreferences";
     private static final String KEY_HIDDEN_APPS = "hidden_apps";
@@ -109,18 +110,22 @@ public class BackgroundAppManager {
                 long ramUsage = parts.length > 1 ? Long.parseLong(parts[1]) : 0;
 
                 try {
-                    if (packageName.equals("com.yn.shappky") ||
-                        packageName.equals("com.android.systemui") ||
-                        packageName.equals(currentKeyboardPackage) ||
-                        packageName.equals(currentLauncherPackage) ||
-                        hiddenApps.contains(packageName)) {
+                    if (hiddenApps.contains(packageName)) {
                         continue;
                     }
 
-                    ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
-                    boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                    boolean isProtected = packageName.equals("com.yn.shappky") ||
+                                          packageName.equals("com.google.android.gms") ||
+                                          packageName.equals("com.android.systemui") ||
+                                          packageName.equals(currentKeyboardPackage) ||
+                                          packageName.equals(currentLauncherPackage);
 
-                    if (!showSystemApps && isSystemApp) {
+                    ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+                    
+                    boolean isPersistent = (appInfo.flags & ApplicationInfo.FLAG_PERSISTENT) != 0;
+                    boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                    
+                    if (!showSystemApps && isSystemApp || !showPersistentApps && isPersistent) {
                         continue;
                     }
 
@@ -129,13 +134,17 @@ public class BackgroundAppManager {
                             packageName,
                             formatMemorySize(ramUsage),
                             packageManager.getApplicationIcon(appInfo),
-                            isSystemApp
+                            isSystemApp,
+                            isPersistent, 
+                            isProtected
                     ));
                 } catch (PackageManager.NameNotFoundException ignored) {}
             }
             Collections.sort(result, (a1, a2) -> {
                 if (!a1.isSystemApp() && a2.isSystemApp()) return -1;
                 if (a1.isSystemApp() && !a2.isSystemApp()) return 1;
+                if (!a1.isPersistentApp() && a2.isPersistentApp()) return -1;
+                if (a1.isPersistentApp() && !a2.isPersistentApp()) return 1;
                 return a1.getAppName().compareToIgnoreCase(a2.getAppName());
             });
 
@@ -158,15 +167,18 @@ public class BackgroundAppManager {
             List<AppModel> allApps = new ArrayList<>();
             for (ApplicationInfo appInfo : packages) {
                 if (appInfo.packageName.equals(context.getPackageName())) {
-                    continue; // Skip our own app
+                    continue;
                 }
                 boolean isSystem = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                boolean isPersistent = (appInfo.flags & ApplicationInfo.FLAG_PERSISTENT) != 0;
                 allApps.add(new AppModel(
                         pm.getApplicationLabel(appInfo).toString(),
                         appInfo.packageName,
                         "-", // RAM placeholder
                         pm.getApplicationIcon(appInfo),
-                        isSystem
+                        isSystem,
+                        isPersistent, 
+                        false
                 ));
             }
             // Sort alphabetically
@@ -229,6 +241,10 @@ public class BackgroundAppManager {
     // Toggle visibility of system apps
     public void setShowSystemApps(boolean show) {
         this.showSystemApps = show;
+    }
+    // Toggle visibility of persistent apps
+    public void setShowPersistentApps(boolean show) {
+        this.showPersistentApps = show;
     }
 
     // Return a copy of the current apps list

@@ -46,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sharedpreferences;
     private static final String PREFERENCES_NAME = "AppPreferences";
     private static final String KEY_SHOW_SYSTEM_APPS = "showSystemApps";
+    private static final String KEY_SHOW_PERSISTENT_APPS = "showPersistentApps";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private ShellManager shellManager; 
@@ -87,7 +88,9 @@ public class MainActivity extends AppCompatActivity {
         // Initialize SharedPreferences
        sharedpreferences = getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
        boolean showSystemApps = sharedpreferences.getBoolean(KEY_SHOW_SYSTEM_APPS, false);
+       boolean showPersistentApps = sharedpreferences.getBoolean(KEY_SHOW_PERSISTENT_APPS, false);
        appManager.setShowSystemApps(showSystemApps);
+       appManager.setShowPersistentApps(showPersistentApps);
        
         // Initialize Shizuku and load apps
         shellManager.setShizukuPermissionListener(shizukuPermissionListener);
@@ -104,6 +107,9 @@ public class MainActivity extends AppCompatActivity {
         binding.listview1.setOnItemClickListener((parent, view, position, id) -> {
             if (position >= 0 && position < appsDataList.size()) {
                 AppModel clickedApp = appsDataList.get(position);
+                if (clickedApp.isProtected()) {
+                    return;
+                }                
                 clickedApp.setSelected(!clickedApp.isSelected());
                 listAdapter.notifyDataSetChanged();
                 updateSelectMenuVisibility(); 
@@ -174,6 +180,11 @@ public class MainActivity extends AppCompatActivity {
            boolean savedState = sharedpreferences.getBoolean(KEY_SHOW_SYSTEM_APPS, false);
            showSystemItem.setChecked(savedState);
         }
+        MenuItem showPersistentItem = menu.findItem(R.id.action_show_persistent);
+        if (showPersistentItem != null) {
+           boolean savedState = sharedpreferences.getBoolean(KEY_SHOW_PERSISTENT_APPS, false);
+           showPersistentItem.setChecked(savedState);
+        }
         selectAllItem = menu.findItem(R.id.action_select_all);
         unselectAllItem = menu.findItem(R.id.action_unselect_all);
 
@@ -185,7 +196,9 @@ public class MainActivity extends AppCompatActivity {
             ImageButton selectBtn = selectView.findViewById(R.id.select_all_action);
             selectBtn.setOnClickListener(v -> {
                 for (AppModel app : appsDataList) {
-                    app.setSelected(true);
+                    if (!app.isProtected()) {
+                        app.setSelected(true);
+                    }
                 }
                 listAdapter.notifyDataSetChanged();
                 updateSelectMenuVisibility(); 
@@ -194,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (unselectView != null) {
                 ImageButton unselectBtn = unselectView.findViewById(R.id.unselect_all_action);
-            unselectBtn.setOnClickListener(v -> {
+                unselectBtn.setOnClickListener(v -> {
                     for (AppModel app : appsDataList) {
                          app.setSelected(false);
                 } 
@@ -213,6 +226,16 @@ public class MainActivity extends AppCompatActivity {
             item.setChecked(newState);
             appManager.setShowSystemApps(newState);
             sharedpreferences.edit().putBoolean(KEY_SHOW_SYSTEM_APPS, newState).apply();
+            for (AppModel app : appsDataList) {
+                app.setSelected(false);
+            }
+            loadBackgroundApps();
+            return true;
+        } else if (itemId == R.id.action_show_persistent) {
+        	boolean newState = !item.isChecked();
+            item.setChecked(newState);
+            appManager.setShowPersistentApps(newState);
+            sharedpreferences.edit().putBoolean(KEY_SHOW_PERSISTENT_APPS, newState).apply();
             for (AppModel app : appsDataList) {
                 app.setSelected(false);
             }

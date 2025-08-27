@@ -8,15 +8,19 @@ public class AppModel {
     private String appRam;
     private Drawable appIcon;
     private boolean isSystemApp;
+    private boolean isPersistentApp;
     private boolean selected;
+    private boolean isProtected;
 
     // Initialize app model
-    public AppModel(String appName, String packageName, String appRam, Drawable appIcon, boolean isSystemApp) {
+    public AppModel(String appName, String packageName, String appRam, Drawable appIcon, boolean isSystemApp,boolean isPersistentApp, boolean isProtected) {
         this.appName = appName;
         this.packageName = packageName;
         this.appRam = appRam;
         this.appIcon = appIcon;
         this.isSystemApp = isSystemApp;
+        this.isPersistentApp = isPersistentApp;
+        this.isProtected = isProtected;
         this.selected = false;
     }
 
@@ -65,6 +69,15 @@ public class AppModel {
         isSystemApp = systemApp;
     }
 
+    // Get and set Persistent app status
+    public boolean isPersistentApp() {
+        return isPersistentApp;
+    }
+
+    public void setPersistentApp(boolean PersistentApp) {
+        isPersistentApp = PersistentApp;
+    }
+
     // Get and set selection state
     public boolean isSelected() {
         return selected;
@@ -72,5 +85,14 @@ public class AppModel {
 
     public void setSelected(boolean selected) {
         this.selected = selected;
+    }
+
+    // Get and set protection state
+    public boolean isProtected() {
+        return isProtected;
+    }
+
+    public void setProtected(boolean aProtected) {
+        isProtected = aProtected;
     }
 }

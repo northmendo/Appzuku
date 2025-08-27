@@ -18,6 +18,12 @@
         android:checked="false"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_show_persistent"
+        android:title="Show persistent apps"
+        android:checkable="true"
+        android:checked="false"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_apps_filter"
         android:title="Apps filter"
         app:showAsAction="never" />
