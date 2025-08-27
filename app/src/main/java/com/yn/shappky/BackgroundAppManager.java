@@ -52,7 +52,20 @@ public class BackgroundAppManager {
         else if (kb < 1024 * 1024) return String.format("%.2f MB", kb / 1024f);
         else return String.format("%.2f GB", kb / (1024f * 1024f));
     }
-
+    
+     private long parseMemoryToKb(String ram) {
+         if (ram == null || ram.isEmpty() || ram.equals("-")) return 0;
+         ram = ram.trim().toUpperCase();
+         try {
+           if (ram.endsWith("KB")) return (long) Float.parseFloat(ram.replace("KB", "").trim());
+           if (ram.endsWith("MB")) return (long) (Float.parseFloat(ram.replace("MB", "").trim()) * 1024);
+           if (ram.endsWith("GB")) return (long) (Float.parseFloat(ram.replace("GB", "").trim()) * 1024 * 1024);
+        } catch (NumberFormatException e) {
+           e.printStackTrace();
+        }
+        return 0;
+     }
+     
     // Load background apps using 'ps' command via Shizuku
     public void loadBackgroundApps(Consumer<List<AppModel>> callback) {
         executor.execute(() -> {
@@ -211,12 +224,24 @@ public class BackgroundAppManager {
                 handler.post(onComplete);
             }
             return;
-        }
+        } 
+        long totalKb = 0;
+        for (String pkg : packageNames) {
+            for (AppModel app : currentAppsList) {
+                if (app.getPackageName().equals(pkg)) {
+                    totalKb += parseMemoryToKb(app.getAppRam());
+                    break;
+                }
+            }
+       }
 
         String command = packageNames.stream()
                 .map(pkg -> "am force-stop " + pkg)
                 .collect(Collectors.joining("; "));
         shellManager.runShellCommand(command, onComplete);
+       String message = "Free up " + formatMemorySize(totalKb);
+        handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
+
     }
 
     // Kill a single app by package name
@@ -235,6 +260,13 @@ public class BackgroundAppManager {
             return;
         }
         shellManager.runShellCommand("am force-stop " + packageName, onComplete);
+        for (AppModel app : currentAppsList) {
+                if (app.getPackageName().equals(packageName)) {
+                    String message = "Free up " + formatMemorySize(parseMemoryToKb(app.getAppRam()));
+                    handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
+                    break; 
+                }
+          }
     }
 
     // Toggle visibility of system apps
