@@ -163,6 +163,8 @@ public class ShappkyService extends Service {
                packageName.equals("com.google.android.gms") ||
                packageName.equals("com.android.systemui") ||
                packageName.equals("com.android.bluetooth") ||
+              
+packageName.equals("com.android.externalstorage") ||
                packageName.equals("com.android.camera") ||
                (currentKeyboardPackage != null && packageName.equals(currentKeyboardPackage)) ||
                (currentLauncherPackage != null && packageName.equals(currentLauncherPackage));
