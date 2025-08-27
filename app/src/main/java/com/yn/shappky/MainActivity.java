@@ -1,6 +1,7 @@
 package com.yn.shappky;
 
 import android.content.Context;
+import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
@@ -9,6 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Build;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -18,6 +20,9 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.Color;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
@@ -43,6 +48,7 @@ import rikka.shizuku.Shizuku;
 
 public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
+    private static final int NOTIFICATION_PERMISSION_CODE = 1;
     private SharedPreferences sharedpreferences;
     private static final String PREFERENCES_NAME = "AppPreferences";
     private static final String KEY_SHOW_SYSTEM_APPS = "showSystemApps";
@@ -56,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private final List<AppModel> appsDataList = new ArrayList<>();
     private MenuItem selectAllItem;
     private MenuItem unselectAllItem;
-
+    
     // Handle Shizuku permission results
     private final Shizuku.OnRequestPermissionResultListener shizukuPermissionListener = (requestCode, grantResult) -> {
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
@@ -67,6 +73,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        NOTIFICATION_PERMISSION_CODE);
+            }
+        }
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
