@@ -38,7 +38,7 @@ public class BackgroundAppManager {
     private SharedPreferences sharedpreferences;
     private static final String PREFERENCES_NAME = "AppPreferences";
     private static final String KEY_HIDDEN_APPS = "hidden_apps";
-    
+
     public BackgroundAppManager(Context context, Handler handler, ExecutorService executor, ShellManager shellManager) {
         this.context = context;
         this.handler = handler;
@@ -52,7 +52,7 @@ public class BackgroundAppManager {
         else if (kb < 1024 * 1024) return String.format("%.2f MB", kb / 1024f);
         else return String.format("%.2f GB", kb / (1024f * 1024f));
     }
-    
+
      private long parseMemoryToKb(String ram) {
          if (ram == null || ram.isEmpty() || ram.equals("-")) return 0;
          ram = ram.trim().toUpperCase();
@@ -65,7 +65,7 @@ public class BackgroundAppManager {
         }
         return 0;
      }
-     
+
     // Load background apps using 'ps' command via Shizuku
     public void loadBackgroundApps(Consumer<List<AppModel>> callback) {
         executor.execute(() -> {
@@ -131,14 +131,19 @@ public class BackgroundAppManager {
                     boolean isProtected = packageName.equals("com.yn.shappky") ||
                                           packageName.equals("com.google.android.gms") ||
                                           packageName.equals("com.android.systemui") ||
+                                          packageName.equals("com.android.bluetooth") ||
+                                          packageName.equals("com.android.externalstorage") ||
+                                          packageName.equals("com.google.android.provides.media.module") ||
+                                          packageName.equals("com.miui.miwallpaper") ||
+                                          packageName.equals("com.android.camera") ||                                          
                                           packageName.equals(currentKeyboardPackage) ||
                                           packageName.equals(currentLauncherPackage);
 
                     ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
-                    
+
                     boolean isPersistentApp = (appInfo.flags & ApplicationInfo.FLAG_PERSISTENT) != 0;
                     boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-                    
+
                     if (!showSystemApps && isSystemApp || !showPersistentApps && isPersistentApp) {
                         continue;
                     }
