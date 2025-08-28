@@ -14,6 +14,9 @@ Shappky, short for Shell App Killer, is an app that stops background application
 - **Fast Performance**: Stops applications with high efficiency.
 - **Select System Apps**: Ability to choose system apps for termination.
 - **Select Specific Apps**: Choose which apps to stop based on user preference.
+- **Security**: Certain apps are protected from being stopped by developers and appear in gray.
+- **Background Service**: A background service that automatically kills unused apps when activated via Quick Tile.
+
 ## Screenshots
 <p align="center">
   <img src="https://github.com/YasserNull/shappky/blob/main/docs/images/screenshot0.jpg" width="30%">
