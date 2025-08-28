@@ -133,7 +133,7 @@ public class BackgroundAppManager {
                                           packageName.equals("com.android.systemui") ||
                                           packageName.equals("com.android.bluetooth") ||
                                           packageName.equals("com.android.externalstorage") ||
-                                          packageName.equals("com.google.android.provides.media.module") ||
+                                          packageName.equals("com.google.android.providers.media.module") ||
                                           packageName.equals("com.miui.miwallpaper") ||
                                           packageName.equals("com.android.camera") ||                                          
                                           packageName.equals(currentKeyboardPackage) ||
