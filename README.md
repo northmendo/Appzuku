@@ -1,4 +1,4 @@
-# Shappky
+# Appzuku
 ![Logo](https://github.com/YasserNull/shappky/blob/main/docs/images/logo.png)
 <p align="center">
   <img src="https://img.shields.io/github/downloads/YasserNull/shappky/total?label=Downloads"/>
