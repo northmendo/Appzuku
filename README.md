@@ -41,3 +41,6 @@ Appzuku is licensed under the [GNU General Public License v3.0](LICENSE).
 If you want to support me, I would be very grateful. 
 
 [**PayPal**](https://www.paypal.com/donate/?hosted_button_id=DDJRFUXHSHRVN)
+
+## Credits
+This project was forked from [YasserNull/shappky](https://github.com/YasserNull/shappky)
