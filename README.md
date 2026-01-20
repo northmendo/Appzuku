@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/License-GPLv3-blue.svg"/>
 </p>
 
+## Documentation is still being updated after the fork.
 ## What is Appzuku?
 Appzuku, is an app that stops background applications using either Shizuku or Root permissions, improving device performance, reducing memory usage, and lowering heat in a lightweight and safe way.
 ## Features
