@@ -1,0 +1,17 @@
+<resources>
+    <color name="list_item_selected_color">#1A237E</color>
+    <color name="list_item_default_color">#FFFFFF</color>
+    <color name="button_background_color">#EEEEEE</color>
+    <color name="button_ripple_color">#757575</color>
+    <color name="colorPrimary">#1A237E</color>
+    <color name="colorPrimaryDark">#000051</color>
+    <color name="colorAccent">#534BAE</color>
+    <color name="colorControlHighlight">#1A237E</color>
+    <color name="colorControlNormal">#1A237E</color>
+    <color name="background_main">#FFFFFF</color>
+    <color name="background_primary">#FFFFFF</color>
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#666666</color>
+    <color name="divider_color">#DDDDDD</color>
+    <color name="toolbar_navy">#001F5C</color>
+</resources>

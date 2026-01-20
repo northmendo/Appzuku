@@ -1,0 +1,54 @@
+package com.northmendo.Appzuku;
+
+/**
+ * Centralized constants for timing, thresholds, and other magic numbers.
+ */
+public final class AppConstants {
+    private AppConstants() {
+        // Prevent instantiation
+    }
+
+    // Kill Intervals (milliseconds)
+    public static final int DEFAULT_KILL_INTERVAL_MS = 18000; // 18 seconds
+    public static final int[] KILL_INTERVALS_MS = { 10000, 18000, 30000, 60000, 300000 };
+    public static final String[] KILL_INTERVAL_LABELS = {
+            "Every 10 seconds",
+            "Every 18 seconds (default)",
+            "Every 30 seconds",
+            "Every 1 minute",
+            "Every 5 minutes"
+    };
+
+    // RAM Thresholds
+    public static final int DEFAULT_RAM_THRESHOLD_PERCENT = 80;
+    public static final int[] RAM_THRESHOLD_VALUES = { 75, 80, 85, 90, 95, 100 };
+    public static final String[] RAM_THRESHOLD_LABELS = { "75%", "80%", "85%", "90%", "95%", "100%" };
+
+    // Stats & History
+    public static final long STATS_HISTORY_DURATION_MS = 12 * 60 * 60 * 1000L; // 12 hours
+    public static final long STATS_PRUNE_THRESHOLD_MS = 48 * 60 * 60 * 1000L; // 48 hours
+    public static final int RELAUNCH_GREEDY_THRESHOLD = 3; // Consider app "greedy" if relaunched more than this
+
+    // Delays
+    public static final int RELAUNCH_CHECK_DELAY_MS = 2000; // 2 seconds delay before checking relaunches
+    public static final int ROOT_CHECK_TIMEOUT_MS = 1000; // 1 second timeout for root check
+
+    // RAM Monitor
+    public static final int RAM_MONITOR_UPDATE_INTERVAL_MS = 1000; // 1 second
+
+    // Notification IDs
+    public static final int NOTIFICATION_ID_SERVICE = 1;
+    public static final int NOTIFICATION_ID_KILL = 2;
+
+    // Notification Channels
+    public static final String CHANNEL_ID_SERVICE = "AppzukuChannel";
+    public static final String CHANNEL_ID_ACTIONS = "AppzukuActions";
+
+    // Theme values
+    public static final String[] THEME_LABELS = { "System default", "Light", "Dark" };
+    public static final int[] THEME_VALUES = {
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO,
+            androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+    };
+}

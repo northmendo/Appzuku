@@ -1,0 +1,133 @@
+package com.northmendo.Appzuku;
+
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.northmendo.Appzuku.databinding.ItemBinding;
+
+import java.util.List;
+
+public class BackgroundAppsRecyclerViewAdapter extends ListAdapter<AppModel, BackgroundAppsRecyclerViewAdapter.ViewHolder> {
+
+    private final Context context;
+    private final int density;
+    private OnAppActionListener actionListener;
+
+    public interface OnAppActionListener {
+        void onKillApp(AppModel app, int position);
+        void onToggleWhitelist(AppModel app, int position);
+        void onAppClick(AppModel app, int position);
+    }
+
+    public BackgroundAppsRecyclerViewAdapter(Context context) {
+        super(new AppDiffCallback());
+        this.context = context;
+        this.density = (int) context.getResources().getDisplayMetrics().density;
+    }
+
+    public void setOnAppActionListener(OnAppActionListener listener) {
+        this.actionListener = listener;
+    }
+
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        ItemBinding binding = ItemBinding.inflate(LayoutInflater.from(context), parent, false);
+        return new ViewHolder(binding);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        holder.bind(getItem(position), position);
+    }
+
+    class ViewHolder extends RecyclerView.ViewHolder {
+        private final ItemBinding binding;
+
+        ViewHolder(ItemBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+
+        void bind(AppModel app, int position) {
+            binding.appName.setText(app.getAppName());
+            binding.appPkg.setText(app.getPackageName());
+            binding.appRam.setText(app.getAppRam());
+            binding.appIcon.setImageDrawable(app.getAppIcon());
+
+            binding.whitelistIcon.setVisibility(app.isWhitelisted() ? View.VISIBLE : View.GONE);
+            binding.imageview2.setBackground(createButtonBackground());
+            binding.imageview2.setElevation(density * 2);
+
+            binding.imageview2.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onKillApp(app, getAdapterPosition());
+                }
+            });
+
+            binding.linear1.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onAppClick(app, getAdapterPosition());
+                }
+            });
+
+            binding.linear1.setOnLongClickListener(v -> {
+                if (actionListener != null && !app.isProtected()) {
+                    actionListener.onToggleWhitelist(app, getAdapterPosition());
+                    return true;
+                }
+                return false;
+            });
+
+            // Status visualization
+            binding.linear1.setSelected(app.isSelected());
+            
+            if (app.isProtected()) {
+                binding.getRoot().setAlpha(0.4f);
+                binding.imageview2.setVisibility(View.GONE);
+            } else if (app.isWhitelisted()) {
+                binding.getRoot().setAlpha(0.85f);
+                binding.imageview2.setVisibility(View.GONE);
+            } else {
+                binding.getRoot().setAlpha(1.0f);
+                binding.imageview2.setVisibility(app.isSelected() ? View.GONE : View.VISIBLE);
+            }
+        }
+    }
+
+    private Drawable createButtonBackground() {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(ContextCompat.getColor(context, R.color.button_background_color));
+        background.setCornerRadius(density * 360);
+        return new RippleDrawable(
+                new ColorStateList(new int[][]{{}}, new int[]{ContextCompat.getColor(context, R.color.button_ripple_color)}),
+                background, null
+        );
+    }
+
+    static class AppDiffCallback extends DiffUtil.ItemCallback<AppModel> {
+        @Override
+        public boolean areItemsTheSame(@NonNull AppModel oldItem, @NonNull AppModel newItem) {
+            return oldItem.getPackageName().equals(newItem.getPackageName());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull AppModel oldItem, @NonNull AppModel newItem) {
+            return oldItem.isSelected() == newItem.isSelected() &&
+                   oldItem.isWhitelisted() == newItem.isWhitelisted() &&
+                   oldItem.getAppRam().equals(newItem.getAppRam());
+        }
+    }
+}

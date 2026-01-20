@@ -1,0 +1,8 @@
+<ImageButton xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/unselect_all_action"
+    android:layout_width="32dp"
+    android:layout_height="32dp"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:scaleType="centerInside"
+    android:src="@drawable/ic_unselect_all"
+    android:padding="2dp" />

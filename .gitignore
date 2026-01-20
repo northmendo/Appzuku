@@ -1,0 +1,23 @@
+# Backups
+backups/
+
+# Gemini documentation
+GEMINI.md
+
+# Android/Gradle defaults
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+
+# Editor/AI temporary files
+GEMINI.backup
+claude.md
+claude.md,backup
+.claude/
+
+# Temporary/Draft documentation
+README1.md
