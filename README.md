@@ -6,8 +6,8 @@
   <img src="https://img.shields.io/badge/License-GPLv3-blue.svg"/>
 </p>
 
-## What is Shappky?
-Shappky, short for Shell App Killer, is an app that stops background applications using either Shizuku or Root permissions, improving device performance, reducing memory usage, and lowering heat in a lightweight and safe way.
+## What is Appzuku?
+Appzuku, is an app that stops background applications using either Shizuku or Root permissions, improving device performance, reducing memory usage, and lowering heat in a lightweight and safe way.
 ## Features
 - **Flexible Permissions**: Works with either Shizuku or Root access.
 - **Simplified User Interface**: Practical and easy-to-use design.
@@ -37,4 +37,4 @@ Shappky is licensed under the [GNU General Public License v3.0](LICENSE).
 
 If you want to support me, I would be very grateful. 
 
-[**PayPal**](https://www.paypal.com/ncp/payment/7X44EWSM9KAVW)
+[**PayPal**](https://www.paypal.com/donate/?hosted_button_id=DDJRFUXHSHRVN)
