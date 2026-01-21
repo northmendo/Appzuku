@@ -199,9 +199,9 @@ public class BackgroundAppManager {
         if (kb < 1024)
             return kb + " KB";
         else if (kb < 1024 * 1024)
-            return String.format("%.2f MB", kb / 1024f);
+            return String.format(java.util.Locale.US, "%.2f MB", kb / 1024f);
         else
-            return String.format("%.2f GB", kb / (1024f * 1024f));
+            return String.format(java.util.Locale.US, "%.2f GB", kb / (1024f * 1024f));
     }
 
     private long parseMemoryToKb(String ram) {
@@ -210,11 +210,11 @@ public class BackgroundAppManager {
         ram = ram.trim().toUpperCase();
         try {
             if (ram.endsWith("KB"))
-                return (long) Float.parseFloat(ram.replace("KB", "").trim());
+                return (long) Float.parseFloat(ram.replace("KB", "").trim().replace(",", "."));
             if (ram.endsWith("MB"))
-                return (long) (Float.parseFloat(ram.replace("MB", "").trim()) * 1024);
+                return (long) (Float.parseFloat(ram.replace("MB", "").trim().replace(",", ".")) * 1024);
             if (ram.endsWith("GB"))
-                return (long) (Float.parseFloat(ram.replace("GB", "").trim()) * 1024 * 1024);
+                return (long) (Float.parseFloat(ram.replace("GB", "").trim().replace(",", ".")) * 1024 * 1024);
         } catch (NumberFormatException e) {
             e.printStackTrace();
         }
@@ -292,6 +292,7 @@ public class BackgroundAppManager {
                             packageManager.getApplicationLabel(appInfo).toString(),
                             packageName,
                             formatMemorySize(ramUsage),
+                            ramUsage,
                             packageManager.getApplicationIcon(appInfo),
                             isSystemApp,
                             isPersistentApp,
@@ -302,10 +303,7 @@ public class BackgroundAppManager {
                 } catch (PackageManager.NameNotFoundException ignored) {
                 }
             }
-            Collections.sort(result,
-                    Comparator.comparing(AppModel::isSystemApp)
-                            .thenComparing(AppModel::isPersistentApp)
-                            .thenComparing(a -> a.getAppName().toLowerCase()));
+            sortAppList(result, SORT_MODE_DEFAULT);
 
             // Update UI with results
             handler.post(() -> {
@@ -316,6 +314,42 @@ public class BackgroundAppManager {
                 }
             });
         });
+    }
+
+    /**
+     * Sort app list based on the specified sort mode
+     */
+    public void sortAppList(List<AppModel> apps, int sortMode) {
+        if (apps == null || apps.isEmpty()) {
+            return;
+        }
+
+        switch (sortMode) {
+            case SORT_MODE_RAM_DESC:
+                // Most RAM to least RAM
+                Collections.sort(apps, (a1, a2) -> Long.compare(a2.getAppRamBytes(), a1.getAppRamBytes()));
+                break;
+            case SORT_MODE_RAM_ASC:
+                // Least RAM to most RAM
+                Collections.sort(apps, (a1, a2) -> Long.compare(a1.getAppRamBytes(), a2.getAppRamBytes()));
+                break;
+            case SORT_MODE_NAME_ASC:
+                // Name A to Z
+                Collections.sort(apps, (a1, a2) -> a1.getAppName().compareToIgnoreCase(a2.getAppName()));
+                break;
+            case SORT_MODE_NAME_DESC:
+                // Name Z to A
+                Collections.sort(apps, (a1, a2) -> a2.getAppName().compareToIgnoreCase(a1.getAppName()));
+                break;
+            case SORT_MODE_DEFAULT:
+            default:
+                // Default: System → Persistent → Name
+                Collections.sort(apps,
+                        Comparator.comparing(AppModel::isSystemApp)
+                                .thenComparing(AppModel::isPersistentApp)
+                                .thenComparing(a -> a.getAppName().toLowerCase()));
+                break;
+        }
     }
 
     // Load all installed applications
@@ -334,6 +368,7 @@ public class BackgroundAppManager {
                         pm.getApplicationLabel(appInfo).toString(),
                         appInfo.packageName,
                         "-", // RAM placeholder
+                        0, // Raw RAM bytes
                         pm.getApplicationIcon(appInfo),
                         isSystem,
                         isPersistent,

@@ -44,6 +44,21 @@ public final class AppConstants {
     public static final String CHANNEL_ID_SERVICE = "AppzukuChannel";
     public static final String CHANNEL_ID_ACTIONS = "AppzukuActions";
 
+    // Sort Modes
+    public static final int SORT_MODE_DEFAULT = 0;
+    public static final int SORT_MODE_RAM_DESC = 1;
+    public static final int SORT_MODE_RAM_ASC = 2;
+    public static final int SORT_MODE_NAME_ASC = 3;
+    public static final int SORT_MODE_NAME_DESC = 4;
+
+    public static final String[] SORT_MODE_LABELS = {
+            "Default (System → Name)",
+            "Most RAM → Least RAM",
+            "Least RAM → Most RAM",
+            "Name A → Z",
+            "Name Z → A"
+    };
+
     // Theme values
     public static final String[] THEME_LABELS = { "System default", "Light", "Dark" };
     public static final int[] THEME_VALUES = {

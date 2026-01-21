@@ -1,19 +1,46 @@
-# Backups
-backups/
-
-# Gemini documentation
-GEMINI.md
-
-# Android/Gradle defaults
+# Gradle files
 .gradle/
 build/
+*/build/
 app/build/
 local.properties
+
+# Android Studio
 .idea/
 *.iml
 .DS_Store
+*.swp
+*.swo
+*~
+
+# Android outputs
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Signing files (IMPORTANT - never commit these)
+*.jks
+*.keystore
+key.properties
+keystore*.properties
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Lint
+lint-baseline.xml
+lint/generated/
+
+# Backups
+backups/
 
 # Editor/AI temporary files
+GEMINI.md
 GEMINI.backup
 claude.md
 claude.md,backup
@@ -21,3 +48,11 @@ claude.md,backup
 
 # Temporary/Draft documentation
 README1.md
+
+# Captures files
+captures/
+.externalNativeBuild
+.cxx
+
+# Log files
+*.log

@@ -6,6 +6,7 @@ public class AppModel {
     private String appName;
     private String packageName;
     private String appRam;
+    private long appRamBytes;
     private Drawable appIcon;
     private boolean isSystemApp;
     private boolean isPersistentApp;
@@ -14,10 +15,12 @@ public class AppModel {
     private boolean isWhitelisted;
 
     // Initialize app model
-    public AppModel(String appName, String packageName, String appRam, Drawable appIcon, boolean isSystemApp, boolean isPersistentApp, boolean isProtected) {
+    public AppModel(String appName, String packageName, String appRam, long appRamBytes, Drawable appIcon,
+            boolean isSystemApp, boolean isPersistentApp, boolean isProtected) {
         this.appName = appName;
         this.packageName = packageName;
         this.appRam = appRam;
+        this.appRamBytes = appRamBytes;
         this.appIcon = appIcon;
         this.isSystemApp = isSystemApp;
         this.isPersistentApp = isPersistentApp;
@@ -51,6 +54,15 @@ public class AppModel {
 
     public void setAppRam(String appRam) {
         this.appRam = appRam;
+    }
+
+    // Get and set app ram bytes (for sorting)
+    public long getAppRamBytes() {
+        return appRamBytes;
+    }
+
+    public void setAppRamBytes(long appRamBytes) {
+        this.appRamBytes = appRamBytes;
     }
 
     // Get and set app icon

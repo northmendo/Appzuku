@@ -624,6 +624,29 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/layout_check_updates"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingVertical="12dp"
+                android:background="?attr/selectableItemBackground">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Check for Updates"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="View latest releases on GitHub"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
 
 
             <TextView
@@ -632,7 +655,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:paddingVertical="24dp"
-                android:text="Appzuku v1.2.0"
+                android:text="Appzuku v1.3.3"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
 

@@ -199,6 +199,9 @@ public class SettingsActivity extends BaseActivity {
         // GitHub
         binding.layoutGithub.setOnClickListener(v -> openUrl("https://github.com/northmendo/Appzuku"));
 
+        // Check for Updates
+        binding.layoutCheckUpdates.setOnClickListener(v -> openUrl("https://github.com/northmendo/Appzuku/releases"));
+
         // Donate
         binding.layoutDonate
                 .setOnClickListener(v -> openUrl("https://www.paypal.com/donate/?hosted_button_id=DDJRFUXHSHRVN"));

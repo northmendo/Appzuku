@@ -34,6 +34,7 @@ import android.widget.Toast;
 import rikka.shizuku.Shizuku;
 
 import static com.northmendo.Appzuku.PreferenceKeys.*;
+import static com.northmendo.Appzuku.AppConstants.*;
 
 public class MainActivity extends BaseActivity {
     private static final String TAG = "MainActivity";
@@ -49,6 +50,7 @@ public class MainActivity extends BaseActivity {
     private final List<AppModel> appsDataList = new ArrayList<>();
     private final List<AppModel> fullAppsList = new ArrayList<>();
     private String currentSearchQuery = "";
+    private int currentSortMode = AppConstants.SORT_MODE_DEFAULT;
     private MenuItem selectAllItem;
     private MenuItem unselectAllItem;
 
@@ -113,6 +115,7 @@ public class MainActivity extends BaseActivity {
     private void loadSettingsAndApplyToManager() {
         boolean showSystemApps = sharedPreferences.getBoolean(KEY_SHOW_SYSTEM_APPS, false);
         boolean showPersistentApps = sharedPreferences.getBoolean(KEY_SHOW_PERSISTENT_APPS, false);
+        currentSortMode = sharedPreferences.getInt(KEY_SORT_MODE, AppConstants.SORT_MODE_DEFAULT);
         appManager.setShowSystemApps(showSystemApps);
         appManager.setShowPersistentApps(showPersistentApps);
     }
@@ -193,6 +196,8 @@ public class MainActivity extends BaseActivity {
                 }
             }
         }
+        // Apply current sort mode
+        appManager.sortAppList(appsDataList, currentSortMode);
         listAdapter.submitList(new ArrayList<>(appsDataList));
         updateSelectMenuVisibility();
     }
@@ -295,8 +300,61 @@ public class MainActivity extends BaseActivity {
         if (itemId == R.id.action_settings) {
             startActivity(new Intent(this, SettingsActivity.class));
             return true;
+        } else if (itemId == R.id.action_sort) {
+            showSortDialog();
+            return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void showSortDialog() {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_sort, null);
+        android.widget.RadioGroup radioGroup = dialogView.findViewById(R.id.sort_radio_group);
+
+        // Set current selection
+        int selectedRadioId;
+        switch (currentSortMode) {
+            case AppConstants.SORT_MODE_RAM_DESC:
+                selectedRadioId = R.id.sort_ram_desc;
+                break;
+            case AppConstants.SORT_MODE_RAM_ASC:
+                selectedRadioId = R.id.sort_ram_asc;
+                break;
+            case AppConstants.SORT_MODE_NAME_ASC:
+                selectedRadioId = R.id.sort_name_asc;
+                break;
+            case AppConstants.SORT_MODE_NAME_DESC:
+                selectedRadioId = R.id.sort_name_desc;
+                break;
+            case AppConstants.SORT_MODE_DEFAULT:
+            default:
+                selectedRadioId = R.id.sort_default;
+                break;
+        }
+        radioGroup.check(selectedRadioId);
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("Apply", (dialog, which) -> {
+                    int checkedId = radioGroup.getCheckedRadioButtonId();
+                    int newSortMode = AppConstants.SORT_MODE_DEFAULT;
+
+                    if (checkedId == R.id.sort_ram_desc) {
+                        newSortMode = AppConstants.SORT_MODE_RAM_DESC;
+                    } else if (checkedId == R.id.sort_ram_asc) {
+                        newSortMode = AppConstants.SORT_MODE_RAM_ASC;
+                    } else if (checkedId == R.id.sort_name_asc) {
+                        newSortMode = AppConstants.SORT_MODE_NAME_ASC;
+                    } else if (checkedId == R.id.sort_name_desc) {
+                        newSortMode = AppConstants.SORT_MODE_NAME_DESC;
+                    }
+
+                    currentSortMode = newSortMode;
+                    sharedPreferences.edit().putInt(KEY_SORT_MODE, newSortMode).apply();
+                    filterApps(currentSearchQuery); // Re-filter and sort
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     @Override
