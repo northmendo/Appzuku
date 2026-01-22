@@ -50,7 +50,7 @@ public class SettingsActivity extends BaseActivity {
         setContentView(binding.getRoot());
 
         // Initialize app manager for dialogs
-        ShellManager shellManager = new ShellManager(this, handler, executor);
+        ShellManager shellManager = new ShellManager(this.getApplicationContext(), handler, executor);
         appManager = new BackgroundAppManager(this.getApplicationContext(), handler, executor, shellManager);
 
         setupToolbar();
@@ -161,9 +161,27 @@ public class SettingsActivity extends BaseActivity {
         // Kill interval selector
         binding.layoutKillInterval.setOnClickListener(v -> showKillIntervalDialog());
 
-        // Show system apps toggle
+        // Show system apps toggle with warning
         binding.switchShowSystem.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            sharedPreferences.edit().putBoolean(KEY_SHOW_SYSTEM_APPS, isChecked).apply();
+            if (isChecked && !sharedPreferences.getBoolean("system_apps_warning_shown", false)) {
+                // Show warning on first enable
+                new AlertDialog.Builder(this)
+                        .setTitle("⚠️ Warning: System Apps")
+                        .setMessage(
+                                "System apps are critical for device stability. Blocking or killing system apps (like 'Security' on Xiaomi devices) may cause crashes, boot loops, or device malfunction.\n\nOnly modify system apps if you know what you're doing.")
+                        .setPositiveButton("I Understand", (dialog, which) -> {
+                            sharedPreferences.edit()
+                                    .putBoolean(KEY_SHOW_SYSTEM_APPS, true)
+                                    .putBoolean("system_apps_warning_shown", true)
+                                    .apply();
+                        })
+                        .setNegativeButton("Cancel", (dialog, which) -> {
+                            buttonView.setChecked(false);
+                        })
+                        .show();
+            } else if (!isChecked) {
+                sharedPreferences.edit().putBoolean(KEY_SHOW_SYSTEM_APPS, false).apply();
+            }
         });
 
         // Show persistent apps toggle
@@ -635,8 +653,31 @@ public class SettingsActivity extends BaseActivity {
 
             autostartDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Save", (dialog, which) -> {
                 Set<String> packagesToDisable = filterAdapter.getSelectedPackages();
-                appManager.saveAutostartDisabledApps(packagesToDisable);
-                appManager.applyAutostartPrevention(allApps, packagesToDisable);
+
+                // Count system apps in selection
+                int systemAppCount = 0;
+                for (AppModel app : allApps) {
+                    if (packagesToDisable.contains(app.getPackageName()) && app.isSystemApp()) {
+                        systemAppCount++;
+                    }
+                }
+
+                // Show warning if system apps are selected
+                if (systemAppCount > 0) {
+                    new AlertDialog.Builder(SettingsActivity.this)
+                            .setTitle("⚠️ System Apps Selected")
+                            .setMessage("You have selected " + systemAppCount
+                                    + " system app(s) to block from auto-starting.\n\nBlocking system apps may cause device instability or prevent critical functions from working properly.\n\nDo you want to continue?")
+                            .setPositiveButton("Yes, Apply", (d2, w2) -> {
+                                appManager.saveAutostartDisabledApps(packagesToDisable);
+                                appManager.applyAutostartPrevention(allApps, packagesToDisable);
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                } else {
+                    appManager.saveAutostartDisabledApps(packagesToDisable);
+                    appManager.applyAutostartPrevention(allApps, packagesToDisable);
+                }
             });
             autostartDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
         });

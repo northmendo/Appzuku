@@ -240,6 +240,24 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    private void selectAll() {
+        for (AppModel app : fullAppsList) {
+            if (!app.isProtected() && !app.isWhitelisted()) {
+                app.setSelected(true);
+            }
+        }
+        listAdapter.notifyDataSetChanged();
+        updateSelectMenuVisibility();
+    }
+
+    private void unselectAll() {
+        for (AppModel app : fullAppsList) {
+            app.setSelected(false);
+        }
+        listAdapter.notifyDataSetChanged();
+        updateSelectMenuVisibility();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
@@ -269,27 +287,12 @@ public class MainActivity extends BaseActivity {
 
         if (selectView != null) {
             ImageButton selectBtn = selectView.findViewById(R.id.select_all_action);
-            selectBtn.setOnClickListener(v -> {
-                for (AppModel app : appsDataList) {
-                    // Skip protected and whitelisted apps
-                    if (!app.isProtected() && !app.isWhitelisted()) {
-                        app.setSelected(true);
-                    }
-                }
-                listAdapter.submitList(new ArrayList<>(appsDataList));
-                updateSelectMenuVisibility();
-            });
+            selectBtn.setOnClickListener(v -> selectAll());
         }
 
         if (unselectView != null) {
             ImageButton unselectBtn = unselectView.findViewById(R.id.unselect_all_action);
-            unselectBtn.setOnClickListener(v -> {
-                for (AppModel app : fullAppsList) {
-                    app.setSelected(false);
-                }
-                listAdapter.submitList(new ArrayList<>(appsDataList));
-                updateSelectMenuVisibility();
-            });
+            unselectBtn.setOnClickListener(v -> unselectAll());
         }
         return true;
     }
@@ -302,6 +305,12 @@ public class MainActivity extends BaseActivity {
             return true;
         } else if (itemId == R.id.action_sort) {
             showSortDialog();
+            return true;
+        } else if (itemId == R.id.action_select_all) {
+            selectAll();
+            return true;
+        } else if (itemId == R.id.action_unselect_all) {
+            unselectAll();
             return true;
         }
         return super.onOptionsItemSelected(item);

@@ -84,9 +84,7 @@ public class RamMonitor {
      * Uses RandomAccessFile for direct file reading without spawning a process.
      */
     private RamInfo readRamUsage() {
-        RandomAccessFile reader = null;
-        try {
-            reader = new RandomAccessFile("/proc/meminfo", "r");
+        try (RandomAccessFile reader = new RandomAccessFile("/proc/meminfo", "r")) {
             String line;
             long memTotal = 0;
             long memAvailable = 0;
@@ -106,13 +104,6 @@ public class RamMonitor {
             }
         } catch (IOException | NumberFormatException e) {
             Log.w(TAG, "Failed to read RAM usage", e);
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException ignored) {
-                }
-            }
         }
         return null;
     }

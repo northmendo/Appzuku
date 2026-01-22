@@ -128,14 +128,12 @@ public class ShappkyService extends Service {
     }
 
     private int getCurrentRamUsagePercent() {
-        try {
-            java.io.RandomAccessFile reader = new java.io.RandomAccessFile("/proc/meminfo", "r");
+        try (java.io.RandomAccessFile reader = new java.io.RandomAccessFile("/proc/meminfo", "r")) {
             String load = reader.readLine();
             long totalRam = Long.parseLong(load.replaceAll("\\D+", ""));
             load = reader.readLine(); // Free
             load = reader.readLine(); // Available
             long availableRam = Long.parseLong(load.replaceAll("\\D+", ""));
-            reader.close();
             return (int) ((totalRam - availableRam) * 100 / totalRam);
         } catch (IOException e) {
             return 0;

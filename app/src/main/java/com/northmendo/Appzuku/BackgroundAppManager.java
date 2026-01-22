@@ -236,24 +236,24 @@ public class BackgroundAppManager {
                 try {
                     String fullOutput = shellManager.runShellCommandAndGetFullOutput(command);
                     if (fullOutput != null) {
-                        BufferedReader reader = new BufferedReader(new StringReader(fullOutput));
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            String[] parts = line.trim().split("\\s+");
-                            if (parts.length >= 2) {
-                                String packageName = parts[1].trim();
-                                String appRam = parts[0].trim();
-                                if (!packageName.isEmpty() && packageName.contains(".")
-                                        && !packageName.startsWith("ERROR:")) {
-                                    try {
-                                        packageManager.getApplicationInfo(packageName, 0);
-                                        runningPackagesFromPs.add(packageName + ":" + appRam); // Store with RAM
-                                    } catch (PackageManager.NameNotFoundException ignored) {
+                        try (BufferedReader reader = new BufferedReader(new StringReader(fullOutput))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                String[] parts = line.trim().split("\\s+");
+                                if (parts.length >= 2) {
+                                    String packageName = parts[1].trim();
+                                    String appRam = parts[0].trim();
+                                    if (!packageName.isEmpty() && packageName.contains(".")
+                                            && !packageName.startsWith("ERROR:")) {
+                                        try {
+                                            packageManager.getApplicationInfo(packageName, 0);
+                                            runningPackagesFromPs.add(packageName + ":" + appRam); // Store with RAM
+                                        } catch (PackageManager.NameNotFoundException ignored) {
+                                        }
                                     }
                                 }
                             }
                         }
-                        reader.close();
                     } else {
                         handler.post(() -> Toast
                                 .makeText(context, "Failed to get running apps output", Toast.LENGTH_SHORT).show());
@@ -500,7 +500,7 @@ public class BackgroundAppManager {
         for (String pkg : packageNames) {
             for (AppModel app : currentAppsList) {
                 if (app.getPackageName().equals(pkg)) {
-                    totalKb += parseMemoryToKb(app.getAppRam());
+                    totalKb += app.getAppRamBytes(); // Use raw bytes for better accuracy
                     break;
                 }
             }
@@ -533,7 +533,7 @@ public class BackgroundAppManager {
         shellManager.runShellCommand("am force-stop " + packageName, onComplete);
         for (AppModel app : currentAppsList) {
             if (app.getPackageName().equals(packageName)) {
-                String message = "Free up " + formatMemorySize(parseMemoryToKb(app.getAppRam()));
+                String message = "Free up " + formatMemorySize(app.getAppRamBytes());
                 handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
                 break;
             }

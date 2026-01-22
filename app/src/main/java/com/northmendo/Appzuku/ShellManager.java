@@ -79,9 +79,12 @@ public class ShellManager {
             return false;
         } finally {
             try {
-                if (os != null) os.close();
-                if (process != null) process.destroy();
-            } catch (IOException ignored) {}
+                if (os != null)
+                    os.close();
+                if (process != null)
+                    process.destroy();
+            } catch (IOException ignored) {
+            }
         }
     }
 
@@ -104,7 +107,8 @@ public class ShellManager {
 
     /**
      * Check if the device has root access.
-     * Returns cached result if available, otherwise returns false (check may still be in progress).
+     * Returns cached result if available, otherwise returns false (check may still
+     * be in progress).
      * For blocking check, use from background thread only.
      */
     public boolean hasRootAccess() {
@@ -135,8 +139,15 @@ public class ShellManager {
 
     /**
      * Check for shell permissions and request Shizuku if needed.
+     * Only requests Shizuku permission if root access is not available.
      */
     public void checkShellPermissions() {
+        // If root access is available, don't request Shizuku
+        if (hasRoot != null && hasRoot) {
+            Log.d(TAG, "Root access available, skipping Shizuku permission request");
+            return;
+        }
+
         try {
             if (Shizuku.pingBinder()) {
                 if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
@@ -223,18 +234,19 @@ public class ShellManager {
             os.flush();
 
             if (outputProcessor != null) {
-                reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    final String finalLine = line;
-                    handler.post(() -> outputProcessor.accept(finalLine));
+                try (BufferedReader readerInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                        BufferedReader errorReader = new BufferedReader(
+                                new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = readerInput.readLine()) != null) {
+                        final String finalLine = line;
+                        handler.post(() -> outputProcessor.accept(finalLine));
+                    }
+                    while ((line = errorReader.readLine()) != null) {
+                        final String finalLine = line;
+                        handler.post(() -> outputProcessor.accept("ERROR: " + finalLine));
+                    }
                 }
-                BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                while ((line = errorReader.readLine()) != null) {
-                    final String finalLine = line;
-                    handler.post(() -> outputProcessor.accept("ERROR: " + finalLine));
-                }
-                errorReader.close();
             }
             process.waitFor();
             if (onSuccess != null) {
@@ -246,10 +258,12 @@ public class ShellManager {
             return false;
         } finally {
             try {
-                if (os != null) os.close();
-                if (reader != null) reader.close();
-                if (process != null) process.destroy();
-            } catch (IOException ignored) {}
+                if (os != null)
+                    os.close();
+                if (process != null)
+                    process.destroy();
+            } catch (IOException ignored) {
+            }
         }
     }
 
@@ -257,7 +271,7 @@ public class ShellManager {
         ShizukuRemoteProcess remote = null;
         BufferedReader reader = null;
         try {
-            remote = Shizuku.newProcess(new String[]{"sh", "-c", command}, null, "/");
+            remote = Shizuku.newProcess(new String[] { "sh", "-c", command }, null, "/");
             reader = new BufferedReader(new InputStreamReader(remote.getInputStream()));
             while (reader.readLine() != null) {
                 // Consume output
@@ -272,8 +286,10 @@ public class ShellManager {
             return false;
         } finally {
             try {
-                if (reader != null) reader.close();
-            } catch (IOException ignored) {}
+                if (reader != null)
+                    reader.close();
+            } catch (IOException ignored) {
+            }
             if (remote != null) {
                 remote.destroy();
             }
@@ -284,28 +300,25 @@ public class ShellManager {
         ShizukuRemoteProcess remote = null;
         BufferedReader reader = null;
         try {
-            remote = Shizuku.newProcess(new String[]{"sh", "-c", command}, null, "/");
-            reader = new BufferedReader(new InputStreamReader(remote.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                final String finalLine = line;
-                handler.post(() -> outputProcessor.accept(finalLine));
+            remote = Shizuku.newProcess(new String[] { "sh", "-c", command }, null, "/");
+            try (BufferedReader readerInput = new BufferedReader(new InputStreamReader(remote.getInputStream()));
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(remote.getErrorStream()))) {
+                String line;
+                while ((line = readerInput.readLine()) != null) {
+                    final String finalLine = line;
+                    handler.post(() -> outputProcessor.accept(finalLine));
+                }
+                while ((line = errorReader.readLine()) != null) {
+                    final String finalLine = line;
+                    handler.post(() -> outputProcessor.accept("ERROR: " + finalLine));
+                }
             }
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(remote.getErrorStream()));
-            while ((line = errorReader.readLine()) != null) {
-                final String finalLine = line;
-                handler.post(() -> outputProcessor.accept("ERROR: " + finalLine));
-            }
-            errorReader.close();
             remote.waitFor();
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Shizuku command with output failed", e);
             return false;
         } finally {
-            try {
-                if (reader != null) reader.close();
-            } catch (IOException ignored) {}
             if (remote != null) {
                 remote.destroy();
             }
@@ -324,16 +337,16 @@ public class ShellManager {
             os.writeBytes("exit\n");
             os.flush();
 
-            reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
+            try (BufferedReader readerInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = readerInput.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                while ((line = errorReader.readLine()) != null) {
+                    output.append("ERROR: ").append(line).append("\n");
+                }
             }
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            while ((line = errorReader.readLine()) != null) {
-                output.append("ERROR: ").append(line).append("\n");
-            }
-            errorReader.close();
             process.waitFor();
             return output.toString();
         } catch (IOException | InterruptedException e) {
@@ -341,10 +354,12 @@ public class ShellManager {
             return null;
         } finally {
             try {
-                if (os != null) os.close();
-                if (reader != null) reader.close();
-                if (process != null) process.destroy();
-            } catch (IOException ignored) {}
+                if (os != null)
+                    os.close();
+                if (process != null)
+                    process.destroy();
+            } catch (IOException ignored) {
+            }
         }
     }
 
@@ -353,26 +368,23 @@ public class ShellManager {
         BufferedReader reader = null;
         StringBuilder output = new StringBuilder();
         try {
-            remote = Shizuku.newProcess(new String[]{"sh", "-c", command}, null, "/");
-            reader = new BufferedReader(new InputStreamReader(remote.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
+            remote = Shizuku.newProcess(new String[] { "sh", "-c", command }, null, "/");
+            try (BufferedReader readerInput = new BufferedReader(new InputStreamReader(remote.getInputStream()));
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(remote.getErrorStream()))) {
+                String line;
+                while ((line = readerInput.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                while ((line = errorReader.readLine()) != null) {
+                    output.append("ERROR: ").append(line).append("\n");
+                }
             }
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(remote.getErrorStream()));
-            while ((line = errorReader.readLine()) != null) {
-                output.append("ERROR: ").append(line).append("\n");
-            }
-            errorReader.close();
             remote.waitFor();
             return output.toString();
         } catch (Exception e) {
             Log.e(TAG, "Shizuku command get output failed", e);
             return null;
         } finally {
-            try {
-                if (reader != null) reader.close();
-            } catch (IOException ignored) {}
             if (remote != null) {
                 remote.destroy();
             }
