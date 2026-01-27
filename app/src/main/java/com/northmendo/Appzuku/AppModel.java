@@ -13,6 +13,8 @@ public class AppModel {
     private boolean selected;
     private boolean isProtected;
     private boolean isWhitelisted;
+    private java.util.List<String> bootReceiverComponents;
+    private boolean autostartBlocked;
 
     // Initialize app model
     public AppModel(String appName, String packageName, String appRam, long appRamBytes, Drawable appIcon,
@@ -27,6 +29,24 @@ public class AppModel {
         this.isProtected = isProtected;
         this.selected = false;
         this.isWhitelisted = false;
+        this.bootReceiverComponents = new java.util.ArrayList<>();
+        this.autostartBlocked = false;
+    }
+
+    public java.util.List<String> getBootReceiverComponents() {
+        return bootReceiverComponents;
+    }
+
+    public void setBootReceiverComponents(java.util.List<String> bootReceiverComponents) {
+        this.bootReceiverComponents = bootReceiverComponents;
+    }
+
+    public boolean isAutostartBlocked() {
+        return autostartBlocked;
+    }
+
+    public void setAutostartBlocked(boolean autostartBlocked) {
+        this.autostartBlocked = autostartBlocked;
     }
 
     // Get and set app name

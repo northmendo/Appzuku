@@ -24,6 +24,12 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
     private List<AppModel> filteredApps;
     private final LayoutInflater inflater;
     private AppFilter filter;
+    
+    // Filter flags
+    private boolean showSystem = false;
+    private boolean showUser = true;
+    private boolean showRunningOnly = false;
+    private CharSequence lastConstraint = "";
 
     public FilterAppsAdapter(Context context, List<AppModel> apps, Set<String> selectedApps) {
         this.inflater = LayoutInflater.from(context);
@@ -39,13 +45,42 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
         });
 
         this.allApps = apps;
-        this.filteredApps = new ArrayList<>(apps);
+        this.filteredApps = new ArrayList<>();
+        // Apply initial filter (User apps only by default matching UI)
+        filterInitialList();
 
         for (AppModel app : apps) {
             if (selectedApps.contains(app.getPackageName())) {
                 app.setSelected(true);
             }
         }
+    }
+    
+    private void filterInitialList() {
+        this.filteredApps.clear();
+        for (AppModel app : allApps) {
+            if (shouldShow(app)) {
+                this.filteredApps.add(app);
+            }
+        }
+    }
+
+    public void setFilters(boolean showSystem, boolean showUser, boolean showRunningOnly) {
+        this.showSystem = showSystem;
+        this.showUser = showUser;
+        this.showRunningOnly = showRunningOnly;
+        getFilter().filter(lastConstraint);
+    }
+    
+    private boolean shouldShow(AppModel app) {
+        // System/User filter
+        if (app.isSystemApp() && !showSystem) return false;
+        if (!app.isSystemApp() && !showUser) return false;
+        
+        // Running filter (assuming > 0 bytes means running)
+        if (showRunningOnly && app.getAppRamBytes() <= 0) return false;
+        
+        return true;
     }
 
     @Override
@@ -105,6 +140,13 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
         return selected;
     }
 
+    public void clearSelection() {
+        for (AppModel app : allApps) {
+            app.setSelected(false);
+        }
+        notifyDataSetChanged();
+    }
+
     @Override
     public Filter getFilter() {
         if (filter == null) {
@@ -116,25 +158,29 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
     private class AppFilter extends Filter {
         @Override
         protected FilterResults performFiltering(CharSequence constraint) {
+            lastConstraint = constraint; // Store for re-filtering
             FilterResults results = new FilterResults();
-
-            if (constraint == null || constraint.length() == 0) {
-                results.values = new ArrayList<>(allApps);
-                results.count = allApps.size();
-            } else {
-                String filterString = constraint.toString().toLowerCase().trim();
-                List<AppModel> filteredList = new ArrayList<>();
-
-                for (AppModel app : allApps) {
-                    if (app.getAppName().toLowerCase().contains(filterString) ||
-                        app.getPackageName().toLowerCase().contains(filterString)) {
-                        filteredList.add(app);
-                    }
-                }
-
-                results.values = filteredList;
-                results.count = filteredList.size();
+            List<AppModel> filteredList = new ArrayList<>();
+            
+            String filterString = "";
+            if (constraint != null && constraint.length() > 0) {
+                 filterString = constraint.toString().toLowerCase().trim();
             }
+
+            for (AppModel app : allApps) {
+                // Check boolean filters first
+                if (!shouldShow(app)) continue;
+
+                // Check text filter
+                if (filterString.isEmpty() || 
+                    app.getAppName().toLowerCase().contains(filterString) ||
+                    app.getPackageName().toLowerCase().contains(filterString)) {
+                    filteredList.add(app);
+                }
+            }
+
+            results.values = filteredList;
+            results.count = filteredList.size();
 
             return results;
         }

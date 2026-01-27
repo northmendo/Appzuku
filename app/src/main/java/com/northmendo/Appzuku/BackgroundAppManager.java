@@ -3,8 +3,10 @@ package com.northmendo.Appzuku;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.widget.Toast;
@@ -45,6 +47,118 @@ public class BackgroundAppManager {
         this.executor = executor;
         this.shellManager = shellManager;
         this.sharedpreferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
+    }
+
+    /**
+     * Toggles autostart prevention for a specific app by enabling/disabling its BOOT_COMPLETED receivers.
+     */
+    public void toggleAutostart(AppModel app, Runnable onComplete) {
+         if (!shellManager.hasAnyShellPermission()) {
+            shellManager.checkShellPermissions();
+            return;
+        }
+
+        executor.execute(() -> {
+            boolean newState = !app.isAutostartBlocked();
+            // If blocking (newState=true), we want to DISABLE the components.
+            // If unblocking (newState=false), we want to ENABLE them.
+            String stateCmd = newState ? "disable" : "enable";
+            
+            StringBuilder command = new StringBuilder();
+            for (String component : app.getBootReceiverComponents()) {
+                // Component is just class name, need full component name: pkg/class
+                command.append("pm ").append(stateCmd).append(" ").append(app.getPackageName()).append("/").append(component).append("; ");
+            }
+
+            if (command.length() > 0) {
+                shellManager.runShellCommand(command.toString(), () -> {
+                    app.setAutostartBlocked(newState);
+                    handler.post(() -> {
+                         Toast.makeText(context, "Autostart " + (newState ? "Disabled" : "Enabled"), Toast.LENGTH_SHORT).show();
+                         if (onComplete != null) onComplete.run();
+                    });
+                });
+            } else {
+                 handler.post(() -> {
+                     Toast.makeText(context, "No autostart components found for this app", Toast.LENGTH_SHORT).show();
+                     if (onComplete != null) onComplete.run();
+                 });
+            }
+        });
+    }
+
+    /**
+     * Scans all installed apps for BOOT_COMPLETED receivers and updates the AppModels.
+     */
+    public void loadAutostartApps(Consumer<List<AppModel>> callback) {
+        executor.execute(() -> {
+            PackageManager pm = context.getPackageManager();
+            Intent intent = new Intent(Intent.ACTION_BOOT_COMPLETED);
+            // Query for all receivers that handle BOOT_COMPLETED, including disabled ones
+            List<ResolveInfo> receivers = pm.queryBroadcastReceivers(intent, 
+                    PackageManager.MATCH_DISABLED_COMPONENTS | PackageManager.GET_META_DATA);
+            
+            // Map: PackageName -> List of Receiver Class Names
+            java.util.Map<String, List<String>> pkgReceivers = new java.util.HashMap<>();
+            // Map: PackageName -> Are all receivers disabled?
+            java.util.Map<String, Boolean> pkgDisabledState = new java.util.HashMap<>();
+
+            for (ResolveInfo info : receivers) {
+                String pkg = info.activityInfo.packageName;
+                String cls = info.activityInfo.name;
+                
+                pkgReceivers.computeIfAbsent(pkg, k -> new ArrayList<>()).add(cls);
+                
+                // Check if currently disabled
+                ComponentName comp = new ComponentName(pkg, cls);
+                int state = pm.getComponentEnabledSetting(comp);
+                boolean isEnabled;
+                if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED || 
+                    state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
+                    isEnabled = false; // Explicitly blocked
+                } else {
+                    // Treat ENABLED and DEFAULT as "Enabled" (Not Blocked) for the purpose of the UI.
+                    // This ensures apps disabled by default in manifest are not auto-selected as "Blocked by User".
+                    isEnabled = true;
+                }
+                
+                // If ANY receiver is enabled, the app is NOT fully blocked.
+                // Logic: Blocked if ALL relevant receivers are disabled.
+                pkgDisabledState.merge(pkg, !isEnabled, (oldVal, newVal) -> oldVal && newVal);
+            }
+
+            List<AppModel> result = new ArrayList<>();
+             for (String pkg : pkgReceivers.keySet()) {
+                 if (pkg.equals(context.getPackageName())) continue; // Skip self
+                 
+                 try {
+                     ApplicationInfo appInfo = pm.getApplicationInfo(pkg, 0);
+                     if (getHiddenApps().contains(pkg)) continue;
+                     
+                     AppModel model = new AppModel(
+                        pm.getApplicationLabel(appInfo).toString(),
+                        pkg,
+                        "-", 0,
+                        pm.getApplicationIcon(appInfo),
+                        (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0,
+                        (appInfo.flags & ApplicationInfo.FLAG_PERSISTENT) != 0,
+                        ProtectedApps.isProtected(context, pkg)
+                     );
+                     
+                     model.setBootReceiverComponents(pkgReceivers.get(pkg));
+                     Boolean allDisabled = pkgDisabledState.get(pkg);
+                     model.setAutostartBlocked(allDisabled != null && allDisabled);
+                     
+                     result.add(model);
+                 } catch (PackageManager.NameNotFoundException e) {
+                     continue;
+                 }
+             }
+             
+             Collections.sort(result, (a, b) -> a.getAppName().compareToIgnoreCase(b.getAppName()));
+             
+             handler.post(() -> callback.accept(result));
+        });
     }
 
     public void performAutoKill(Runnable onComplete) {
@@ -317,6 +431,50 @@ public class BackgroundAppManager {
     }
 
     /**
+     * Updates the running state and RAM usage of the provided app list.
+     * This runs asynchronously and updates the models in-place.
+     */
+    public void updateRunningState(List<AppModel> apps, Runnable onComplete) {
+        if (!shellManager.hasAnyShellPermission()) {
+            if (onComplete != null) handler.post(onComplete);
+            return;
+        }
+
+        executor.execute(() -> {
+            String psOutput = shellManager.runShellCommandAndGetFullOutput(
+                    "ps -A -o rss,name | grep '\\.' | grep -v '[-:@]'");
+            
+            java.util.Map<String, Long> runningMap = new java.util.HashMap<>();
+            if (psOutput != null) {
+                try (BufferedReader reader = new BufferedReader(new StringReader(psOutput))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.trim().split("\\s+");
+                        if (parts.length >= 2) {
+                            String packageName = parts[1].trim();
+                            long ramUsage = Long.parseLong(parts[0].trim());
+                            runningMap.put(packageName, ramUsage);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            
+            for (AppModel app : apps) {
+                if (runningMap.containsKey(app.getPackageName())) {
+                    long ram = runningMap.get(app.getPackageName());
+                    app.setAppRamBytes(ram);
+                    app.setAppRam(formatMemorySize(ram));
+                } else {
+                    app.setAppRamBytes(0);
+                    app.setAppRam("-");
+                }
+            }
+            
+            if (onComplete != null) handler.post(onComplete);
+        });
+    }
+
+    /**
      * Sort app list based on the specified sort mode
      */
     public void sortAppList(List<AppModel> apps, int sortMode) {
@@ -427,10 +585,10 @@ public class BackgroundAppManager {
     }
 
     /**
-     * Apply autostart prevention (RUN_IN_BACKGROUND appop) for packages.
+     * Apply autostart prevention by enabling/disabling BOOT_COMPLETED receivers.
      * 
-     * @param allApps      List of all apps that were in the selection dialog
-     * @param disabledApps Set of apps that should be denied RUN_IN_BACKGROUND
+     * @param allApps      List of all apps (must have bootReceiverComponents populated)
+     * @param disabledApps Set of apps that should have their receivers disabled
      */
     public void applyAutostartPrevention(List<AppModel> allApps, Set<String> disabledApps) {
         if (!shellManager.hasAnyShellPermission()) {
@@ -440,21 +598,25 @@ public class BackgroundAppManager {
 
         executor.execute(() -> {
             StringBuilder commandBuilder = new StringBuilder();
+            
             for (AppModel app : allApps) {
-                String pkg = app.getPackageName();
-                String mode = disabledApps.contains(pkg) ? "deny" : "allow";
-                commandBuilder.append("cmd appops set ").append(pkg).append(" RUN_IN_BACKGROUND ").append(mode)
-                        .append("; ");
-
-                // Optional: also handle RUN_ANY_IN_BACKGROUND for newer Android versions
-                commandBuilder.append("cmd appops set ").append(pkg).append(" RUN_ANY_IN_BACKGROUND ").append(mode)
-                        .append("; ");
+                List<String> receivers = app.getBootReceiverComponents();
+                if (receivers == null || receivers.isEmpty()) {
+                    continue;
+                }
+                
+                boolean shouldBlock = disabledApps.contains(app.getPackageName());
+                String action = shouldBlock ? "disable" : "enable";
+                
+                for (String receiver : receivers) {
+                    commandBuilder.append("pm ").append(action).append(" ")
+                        .append(app.getPackageName()).append("/").append(receiver).append("; ");
+                }
             }
 
             if (commandBuilder.length() > 0) {
                 shellManager.runShellCommand(commandBuilder.toString(), () -> {
-                    handler.post(
-                            () -> Toast.makeText(context, "Autostart settings applied", Toast.LENGTH_SHORT).show());
+                    handler.post(() -> Toast.makeText(context, "Autostart settings applied", Toast.LENGTH_SHORT).show());
                 });
             }
         });

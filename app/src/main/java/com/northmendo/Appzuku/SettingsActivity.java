@@ -14,7 +14,17 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
 import android.os.Handler;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import android.widget.Toast;
 import android.os.Looper;
 
 import androidx.appcompat.app.AlertDialog;
@@ -25,6 +35,7 @@ import com.northmendo.Appzuku.databinding.ActivitySettingsBinding;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -40,8 +51,25 @@ public class SettingsActivity extends BaseActivity {
 
     private ActivitySettingsBinding binding;
     private BackgroundAppManager appManager;
+    private BackupManager backupManager;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    private final ActivityResultLauncher<String> createBackupLauncher = registerForActivityResult(
+            new ActivityResultContracts.CreateDocument("application/json"),
+            uri -> {
+                if (uri != null) {
+                    exportBackup(uri);
+                }
+            });
+
+    private final ActivityResultLauncher<String[]> restoreBackupLauncher = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(),
+            uri -> {
+                if (uri != null) {
+                    importBackup(uri);
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +80,7 @@ public class SettingsActivity extends BaseActivity {
         // Initialize app manager for dialogs
         ShellManager shellManager = new ShellManager(this.getApplicationContext(), handler, executor);
         appManager = new BackgroundAppManager(this.getApplicationContext(), handler, executor, shellManager);
+        backupManager = new BackupManager(this);
 
         setupToolbar();
         loadSettings();
@@ -214,6 +243,9 @@ public class SettingsActivity extends BaseActivity {
         // Statistics
         binding.layoutStats.setOnClickListener(v -> showStatsDialog());
 
+        // Backup & Restore
+        binding.layoutBackupRestore.setOnClickListener(v -> showBackupRestoreDialog());
+
         // GitHub
         binding.layoutGithub.setOnClickListener(v -> openUrl("https://github.com/northmendo/Appzuku"));
 
@@ -252,6 +284,7 @@ public class SettingsActivity extends BaseActivity {
         ListView listView = dialogView.findViewById(R.id.filter_list_view);
         ProgressBar progressBar = dialogView.findViewById(R.id.filter_loading_progress);
         EditText searchBox = dialogView.findViewById(R.id.filter_search);
+        LinearLayout filterOptions = dialogView.findViewById(R.id.filter_options_container);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle("Blacklisted apps (Target to kill)")
@@ -275,6 +308,14 @@ public class SettingsActivity extends BaseActivity {
             progressBar.setVisibility(View.GONE);
             listView.setVisibility(View.VISIBLE);
             searchBox.setVisibility(View.VISIBLE);
+            filterOptions.setVisibility(View.VISIBLE);
+            
+            setupFilterListeners(dialogView, filterAdapter);
+            
+            appManager.updateRunningState(allApps, () -> {
+                if (!dialog.isShowing()) return;
+                filterAdapter.notifyDataSetChanged();
+            });
 
             searchBox.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -370,7 +411,7 @@ public class SettingsActivity extends BaseActivity {
                         Set<String> currentDisabled = appManager.getAutostartDisabledApps();
                         currentDisabled.addAll(highRelaunchPackages);
                         appManager.saveAutostartDisabledApps(currentDisabled);
-                        appManager.loadAllApps(allApps -> {
+                        appManager.loadAutostartApps(allApps -> {
                             appManager.applyAutostartPrevention(allApps, currentDisabled);
                         });
                     });
@@ -485,6 +526,7 @@ public class SettingsActivity extends BaseActivity {
         ListView listView = dialogView.findViewById(R.id.filter_list_view);
         ProgressBar progressBar = dialogView.findViewById(R.id.filter_loading_progress);
         EditText searchBox = dialogView.findViewById(R.id.filter_search);
+        LinearLayout filterOptions = dialogView.findViewById(R.id.filter_options_container);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle("Whitelisted apps (never kill)")
@@ -515,6 +557,14 @@ public class SettingsActivity extends BaseActivity {
             progressBar.setVisibility(View.GONE);
             listView.setVisibility(View.VISIBLE);
             searchBox.setVisibility(View.VISIBLE);
+            filterOptions.setVisibility(View.VISIBLE);
+            
+            setupFilterListeners(dialogView, filterAdapter);
+            
+            appManager.updateRunningState(allApps, () -> {
+                if (!whitelistDialog.isShowing()) return;
+                filterAdapter.notifyDataSetChanged();
+            });
 
             searchBox.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -545,6 +595,7 @@ public class SettingsActivity extends BaseActivity {
         ListView listView = dialogView.findViewById(R.id.filter_list_view);
         ProgressBar progressBar = dialogView.findViewById(R.id.filter_loading_progress);
         EditText searchBox = dialogView.findViewById(R.id.filter_search);
+        LinearLayout filterOptions = dialogView.findViewById(R.id.filter_options_container);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle("Select the apps you want to hide")
@@ -575,6 +626,14 @@ public class SettingsActivity extends BaseActivity {
             progressBar.setVisibility(View.GONE);
             listView.setVisibility(View.VISIBLE);
             searchBox.setVisibility(View.VISIBLE);
+            filterOptions.setVisibility(View.VISIBLE);
+            
+            setupFilterListeners(dialogView, filterAdapter);
+            
+            appManager.updateRunningState(allApps, () -> {
+                if (!filterDialog.isShowing()) return;
+                filterAdapter.notifyDataSetChanged();
+            });
 
             searchBox.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -605,6 +664,7 @@ public class SettingsActivity extends BaseActivity {
         ListView listView = dialogView.findViewById(R.id.filter_list_view);
         ProgressBar progressBar = dialogView.findViewById(R.id.filter_loading_progress);
         EditText searchBox = dialogView.findViewById(R.id.filter_search);
+        LinearLayout filterOptions = dialogView.findViewById(R.id.filter_options_container);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle("Autostart Prevention")
@@ -626,8 +686,15 @@ public class SettingsActivity extends BaseActivity {
         autostartDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
         autostartDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
 
-        appManager.loadAllApps(allApps -> {
+        appManager.loadAutostartApps(allApps -> {
             Set<String> disabledApps = appManager.getAutostartDisabledApps();
+            // Sync the model state for consistency, though UI uses the Set
+            for (AppModel app : allApps) {
+                if (disabledApps.contains(app.getPackageName())) {
+                    app.setAutostartBlocked(true);
+                }
+            }
+
             FilterAppsAdapter filterAdapter = new FilterAppsAdapter(this, allApps, disabledApps);
             listView.setAdapter(filterAdapter);
             listView.setOnItemClickListener(null);
@@ -635,6 +702,14 @@ public class SettingsActivity extends BaseActivity {
             progressBar.setVisibility(View.GONE);
             listView.setVisibility(View.VISIBLE);
             searchBox.setVisibility(View.VISIBLE);
+            filterOptions.setVisibility(View.VISIBLE);
+            
+            setupFilterListeners(dialogView, filterAdapter);
+            
+            appManager.updateRunningState(allApps, () -> {
+                if (!autostartDialog.isShowing()) return;
+                filterAdapter.notifyDataSetChanged();
+            });
 
             searchBox.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -720,5 +795,86 @@ public class SettingsActivity extends BaseActivity {
         super.onDestroy();
         executor.shutdownNow();
         binding = null;
+    }
+
+    private void setupFilterListeners(View dialogView, FilterAppsAdapter adapter) {
+        CheckBox chkSystem = dialogView.findViewById(R.id.filter_chk_system);
+        CheckBox chkUser = dialogView.findViewById(R.id.filter_chk_user);
+        CheckBox chkRunning = dialogView.findViewById(R.id.filter_chk_running);
+        android.widget.TextView btnClear = dialogView.findViewById(R.id.filter_btn_clear);
+
+        android.widget.CompoundButton.OnCheckedChangeListener listener = (buttonView, isChecked) -> {
+            adapter.setFilters(chkSystem.isChecked(), chkUser.isChecked(), chkRunning.isChecked());
+        };
+
+        chkSystem.setOnCheckedChangeListener(listener);
+        chkUser.setOnCheckedChangeListener(listener);
+        chkRunning.setOnCheckedChangeListener(listener);
+        
+        btnClear.setOnClickListener(v -> adapter.clearSelection());
+    }
+
+    private void showBackupRestoreDialog() {
+        String[] options = { "Backup Settings", "Restore Settings" };
+        new AlertDialog.Builder(this)
+                .setTitle("Backup & Restore")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        createBackupLauncher.launch("appzuku_backup.json");
+                    } else {
+                        restoreBackupLauncher.launch(new String[]{"application/json"});
+                    }
+                })
+                .show();
+    }
+
+    private void exportBackup(Uri uri) {
+        executor.execute(() -> {
+            String json = backupManager.createBackupJson();
+            if (json == null) {
+                handler.post(() -> Toast.makeText(this, "Failed to create backup data", Toast.LENGTH_SHORT).show());
+                return;
+            }
+
+            try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                if (os != null) {
+                    os.write(json.getBytes(StandardCharsets.UTF_8));
+                    handler.post(() -> Toast.makeText(this, "Backup saved successfully", Toast.LENGTH_SHORT).show());
+                } else {
+                    handler.post(() -> Toast.makeText(this, "Failed to write to file", Toast.LENGTH_SHORT).show());
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Export failed", e);
+                handler.post(() -> Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void importBackup(Uri uri) {
+        executor.execute(() -> {
+            try (InputStream is = getContentResolver().openInputStream(uri);
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+
+                boolean success = backupManager.restoreBackupJson(sb.toString());
+                handler.post(() -> {
+                    if (success) {
+                        Toast.makeText(this, "Restore successful", Toast.LENGTH_SHORT).show();
+                        // Reload lists if they are currently displayed? 
+                        // Since dialogs are closed, next open will reload from prefs.
+                    } else {
+                        Toast.makeText(this, "Restore failed: Invalid data", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Import failed", e);
+                handler.post(() -> Toast.makeText(this, "Import failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        });
     }
 }

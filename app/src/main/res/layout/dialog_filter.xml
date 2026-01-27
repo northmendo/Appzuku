@@ -21,6 +21,54 @@
         android:textColorHint="@color/text_secondary"
         android:visibility="gone" />
 
+    <LinearLayout
+        android:id="@+id/filter_options_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp">
+
+        <CheckBox
+            android:id="@+id/filter_chk_system"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="System"
+            android:textColor="@color/text_primary"
+            android:checked="false" />
+
+        <CheckBox
+            android:id="@+id/filter_chk_user"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="User"
+            android:textColor="@color/text_primary"
+            android:checked="true" />
+
+        <CheckBox
+            android:id="@+id/filter_chk_running"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Running"
+            android:textColor="@color/text_primary"
+            android:checked="false" />
+
+        <TextView
+            android:id="@+id/filter_btn_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clear"
+            android:textColor="@color/colorAccent"
+            android:textStyle="bold"
+            android:padding="8dp"
+            android:gravity="center"
+            android:foreground="?attr/selectableItemBackground" />
+
+    </LinearLayout>
+
     <ProgressBar
         android:id="@+id/filter_loading_progress"
         android:layout_width="wrap_content"
