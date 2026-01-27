@@ -44,11 +44,12 @@
                 android:value="true" />
         </service>
 
-        <receiver android:name=".KillTriggerReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.SCREEN_OFF" />
-            </intent-filter>
-        </receiver>
+        <service 
+            android:name=".ShappkyService" 
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <receiver android:name=".KillTriggerReceiver" android:exported="true" />
 
         <receiver android:name=".BootReceiver" android:exported="false">
             <intent-filter>

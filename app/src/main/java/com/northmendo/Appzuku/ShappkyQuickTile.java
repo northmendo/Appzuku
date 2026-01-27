@@ -96,6 +96,9 @@ public class ShappkyQuickTile extends TileService {
             }
 
             if (packageName != null && !packageName.equals(getPackageName()) && !packageName.equals("com.android.systemui")) {
+                // Close the notification shade
+                shellManager.runShellCommand("cmd statusbar collapse", null);
+
                 final String killedPackage = packageName;
                 String cmd = "am force-stop " + killedPackage;
                 shellManager.runShellCommand(cmd, () -> {
