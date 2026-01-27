@@ -15,7 +15,7 @@ Appzuku is an Android application that stops background applications using eithe
 - **Autostart Prevention**: Prevent specific apps from running in the background automatically.
 - **Theme Customization**: Support for Light, Dark, and System Default themes.
 - **Background Service**: Automatically kills unused apps periodically when activated.
-- **Quick Settings Tile**: Toggle the background service directly from your notification shade.
+- **Quick Settings Kill App Tile**: Instantly force-stop the current foreground application directly from your notification shade.
 - **Protected Apps**: System-critical apps and user-whitelisted apps are protected from being killed.
 - **RAM Monitoring**: Real-time display of system RAM usage.
 
