@@ -40,14 +40,13 @@ lint/generated/
 backups/
 
 # Editor/AI temporary files
-GEMINI.md
 GEMINI.backup
-claude.md
 claude.md,backup
 .claude/
 
-# Temporary/Draft documentation
-README1.md
+# Documentation
+*.md
+!README.md
 
 # Captures files
 captures/
@@ -57,4 +56,4 @@ captures/
 # Log files
 *.log
 .ralph-state/
-options_plan.md
+
