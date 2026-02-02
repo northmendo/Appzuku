@@ -84,6 +84,25 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/linear_overflow"
+            android:layout_width="40dp"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="8dp">
+
+            <ImageView
+                android:id="@+id/btn_overflow"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_more_vert"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="More options"
+                android:focusable="false" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/linear3"
             android:layout_width="48dp"
             android:layout_height="48dp"

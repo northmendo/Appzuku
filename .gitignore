@@ -57,3 +57,4 @@ captures/
 # Log files
 *.log
 .ralph-state/
+options_plan.md

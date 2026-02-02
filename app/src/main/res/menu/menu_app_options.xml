@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_app_info"
+        android:title="App Info" />
+    <item
+        android:id="@+id/action_uninstall"
+        android:title="Uninstall" />
+    <item
+        android:id="@+id/action_add_to_list"
+        android:title="Add to List...">
+        <menu>
+            <item
+                android:id="@+id/action_whitelist"
+                android:title="Whitelist"
+                android:checkable="true" />
+            <item
+                android:id="@+id/action_blacklist"
+                android:title="Blacklist"
+                android:checkable="true" />
+            <item
+                android:id="@+id/action_hidden"
+                android:title="Hidden"
+                android:checkable="true" />
+            <item
+                android:id="@+id/action_autostart"
+                android:title="Block Autostart"
+                android:checkable="true" />
+        </menu>
+    </item>
+</menu>

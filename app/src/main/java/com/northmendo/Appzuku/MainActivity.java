@@ -29,7 +29,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import android.widget.PopupMenu;
 import android.widget.Toast;
+import android.net.Uri;
+import androidx.appcompat.app.AlertDialog;
 
 import rikka.shizuku.Shizuku;
 
@@ -152,7 +155,140 @@ public class MainActivity extends BaseActivity {
                 listAdapter.notifyItemChanged(position);
                 updateSelectMenuVisibility();
             }
+
+            @Override
+            public void onOverflowClick(AppModel app, View anchor) {
+                showAppOptionsMenu(app, anchor);
+            }
         });
+    }
+
+    private void showAppOptionsMenu(AppModel app, View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenuInflater().inflate(R.menu.menu_app_options, popup.getMenu());
+
+        // Hide uninstall for system apps
+        if (app.isSystemApp()) {
+            popup.getMenu().findItem(R.id.action_uninstall).setVisible(false);
+        }
+
+        // Set checkmarks for current list memberships
+        String packageName = app.getPackageName();
+        popup.getMenu().findItem(R.id.action_whitelist).setChecked(
+                appManager.getWhitelistedApps().contains(packageName));
+        popup.getMenu().findItem(R.id.action_blacklist).setChecked(
+                appManager.getBlacklistedApps().contains(packageName));
+        popup.getMenu().findItem(R.id.action_hidden).setChecked(
+                appManager.getHiddenApps().contains(packageName));
+        popup.getMenu().findItem(R.id.action_autostart).setChecked(
+                appManager.getAutostartDisabledApps().contains(packageName));
+
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.action_app_info) {
+                openAppInfo(packageName);
+                return true;
+            } else if (id == R.id.action_uninstall) {
+                showUninstallConfirmation(app);
+                return true;
+            } else if (id == R.id.action_whitelist) {
+                toggleListMembership(app, "whitelist");
+                return true;
+            } else if (id == R.id.action_blacklist) {
+                toggleListMembership(app, "blacklist");
+                return true;
+            } else if (id == R.id.action_hidden) {
+                toggleListMembership(app, "hidden");
+                return true;
+            } else if (id == R.id.action_autostart) {
+                toggleListMembership(app, "autostart");
+                return true;
+            }
+            return false;
+        });
+
+        popup.show();
+    }
+
+    private void openAppInfo(String packageName) {
+        try {
+            Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + packageName));
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to open app info", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showUninstallConfirmation(AppModel app) {
+        new AlertDialog.Builder(this)
+                .setTitle("Uninstall " + app.getAppName())
+                .setMessage("Are you sure you want to uninstall this app?")
+                .setPositiveButton("Uninstall", (dialog, which) -> {
+                    Intent intent = new Intent(Intent.ACTION_DELETE);
+                    intent.setData(Uri.parse("package:" + app.getPackageName()));
+                    startActivity(intent);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void toggleListMembership(AppModel app, String listType) {
+        String packageName = app.getPackageName();
+        Set<String> currentSet;
+        String addedMsg, removedMsg;
+
+        switch (listType) {
+            case "whitelist":
+                currentSet = appManager.getWhitelistedApps();
+                addedMsg = "Added to whitelist";
+                removedMsg = "Removed from whitelist";
+                break;
+            case "blacklist":
+                currentSet = appManager.getBlacklistedApps();
+                addedMsg = "Added to blacklist";
+                removedMsg = "Removed from blacklist";
+                break;
+            case "hidden":
+                currentSet = appManager.getHiddenApps();
+                addedMsg = "App hidden";
+                removedMsg = "App unhidden";
+                break;
+            case "autostart":
+                currentSet = appManager.getAutostartDisabledApps();
+                addedMsg = "Autostart blocked";
+                removedMsg = "Autostart allowed";
+                break;
+            default:
+                return;
+        }
+
+        boolean wasInList = currentSet.contains(packageName);
+        if (wasInList) {
+            currentSet.remove(packageName);
+        } else {
+            currentSet.add(packageName);
+        }
+
+        // Save the updated set
+        switch (listType) {
+            case "whitelist":
+                appManager.saveWhitelistedApps(currentSet);
+                app.setWhitelisted(!wasInList);
+                break;
+            case "blacklist":
+                appManager.saveBlacklistedApps(currentSet);
+                break;
+            case "hidden":
+                appManager.saveHiddenApps(currentSet);
+                break;
+            case "autostart":
+                appManager.saveAutostartDisabledApps(currentSet);
+                break;
+        }
+
+        listAdapter.notifyDataSetChanged();
+        Toast.makeText(this, wasInList ? removedMsg : addedMsg, Toast.LENGTH_SHORT).show();
     }
 
     // Load background apps with selection preservation

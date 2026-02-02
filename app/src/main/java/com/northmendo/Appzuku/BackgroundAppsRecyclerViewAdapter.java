@@ -29,6 +29,7 @@ public class BackgroundAppsRecyclerViewAdapter extends ListAdapter<AppModel, Bac
         void onKillApp(AppModel app, int position);
         void onToggleWhitelist(AppModel app, int position);
         void onAppClick(AppModel app, int position);
+        void onOverflowClick(AppModel app, View anchor);
     }
 
     public BackgroundAppsRecyclerViewAdapter(Context context) {
@@ -91,18 +92,27 @@ public class BackgroundAppsRecyclerViewAdapter extends ListAdapter<AppModel, Bac
                 return false;
             });
 
+            binding.btnOverflow.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onOverflowClick(app, v);
+                }
+            });
+
             // Status visualization
             binding.linear1.setSelected(app.isSelected());
-            
+
             if (app.isProtected()) {
                 binding.getRoot().setAlpha(0.4f);
                 binding.imageview2.setVisibility(View.GONE);
+                binding.linearOverflow.setVisibility(View.GONE);
             } else if (app.isWhitelisted()) {
                 binding.getRoot().setAlpha(0.85f);
                 binding.imageview2.setVisibility(View.GONE);
+                binding.linearOverflow.setVisibility(View.VISIBLE);  // Still show menu for whitelisted
             } else {
                 binding.getRoot().setAlpha(1.0f);
                 binding.imageview2.setVisibility(app.isSelected() ? View.GONE : View.VISIBLE);
+                binding.linearOverflow.setVisibility(app.isSelected() ? View.GONE : View.VISIBLE);
             }
         }
     }
