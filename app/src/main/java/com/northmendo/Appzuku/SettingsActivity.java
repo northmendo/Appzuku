@@ -298,8 +298,8 @@ public class SettingsActivity extends BaseActivity {
         dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancel", (d, w) -> d.dismiss());
         searchBox.setVisibility(View.GONE);
         dialog.show();
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
 
         appManager.loadAllApps(allApps -> {
             Set<String> blacklisted = appManager.getBlacklistedApps();
@@ -335,7 +335,7 @@ public class SettingsActivity extends BaseActivity {
             dialog.setButton(AlertDialog.BUTTON_POSITIVE, "Save", (d, w) -> {
                 appManager.saveBlacklistedApps(filterAdapter.getSelectedPackages());
             });
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
         });
     }
 
@@ -457,7 +457,7 @@ public class SettingsActivity extends BaseActivity {
         dialog.getWindow().setBackgroundDrawable(
                 new ColorDrawable(ContextCompat.getColor(this, R.color.background_primary)));
         dialog.show();
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
     }
 
     private void updateAutomationOptionsVisibility(boolean serviceEnabled, boolean periodicEnabled) {
@@ -517,7 +517,7 @@ public class SettingsActivity extends BaseActivity {
         dialog.getWindow().setBackgroundDrawable(
                 new ColorDrawable(ContextCompat.getColor(this, R.color.background_primary)));
         dialog.show();
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
     }
 
     private void showWhitelistDialog() {
@@ -545,8 +545,8 @@ public class SettingsActivity extends BaseActivity {
         searchBox.setVisibility(View.GONE);
         whitelistDialog.show();
 
-        whitelistDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
-        whitelistDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+        whitelistDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
+        whitelistDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
 
         appManager.loadAllApps(allApps -> {
             Set<String> whitelistedApps = appManager.getWhitelistedApps();
@@ -585,7 +585,7 @@ public class SettingsActivity extends BaseActivity {
                 Set<String> packagesToWhitelist = filterAdapter.getSelectedPackages();
                 appManager.saveWhitelistedApps(packagesToWhitelist);
             });
-            whitelistDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+            whitelistDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
         });
     }
 
@@ -614,8 +614,8 @@ public class SettingsActivity extends BaseActivity {
         searchBox.setVisibility(View.GONE);
         filterDialog.show();
 
-        filterDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
-        filterDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+        filterDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
+        filterDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
 
         appManager.loadAllApps(allApps -> {
             Set<String> hiddenApps = appManager.getHiddenApps();
@@ -654,7 +654,7 @@ public class SettingsActivity extends BaseActivity {
                 Set<String> packagesToHide = filterAdapter.getSelectedPackages();
                 appManager.saveHiddenApps(packagesToHide);
             });
-            filterDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+            filterDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
         });
     }
 
@@ -683,8 +683,8 @@ public class SettingsActivity extends BaseActivity {
         searchBox.setVisibility(View.GONE);
         autostartDialog.show();
 
-        autostartDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
-        autostartDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+        autostartDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
+        autostartDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
 
         appManager.loadAutostartApps(allApps -> {
             Set<String> disabledApps = appManager.getAutostartDisabledApps();
@@ -754,7 +754,7 @@ public class SettingsActivity extends BaseActivity {
                     appManager.applyAutostartPrevention(allApps, packagesToDisable);
                 }
             });
-            autostartDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.WHITE);
+            autostartDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
         });
     }
 

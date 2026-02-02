@@ -14,4 +14,5 @@
     <color name="text_secondary">#666666</color>
     <color name="divider_color">#DDDDDD</color>
     <color name="toolbar_navy">#001F5C</color>
+    <color name="dialog_button_text">#1A237E</color>
 </resources>
