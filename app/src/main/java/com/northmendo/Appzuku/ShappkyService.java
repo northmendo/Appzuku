@@ -135,7 +135,7 @@ public class ShappkyService extends Service {
             load = reader.readLine(); // Available
             long availableRam = Long.parseLong(load.replaceAll("\\D+", ""));
             return (int) ((totalRam - availableRam) * 100 / totalRam);
-        } catch (IOException e) {
+        } catch (IOException | NumberFormatException e) {
             return 0;
         }
     }

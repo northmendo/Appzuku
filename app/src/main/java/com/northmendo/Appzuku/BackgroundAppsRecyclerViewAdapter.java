@@ -73,20 +73,23 @@ public class BackgroundAppsRecyclerViewAdapter extends ListAdapter<AppModel, Bac
             binding.imageview2.setElevation(density * 2);
 
             binding.imageview2.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onKillApp(app, getAdapterPosition());
+                int pos = getAdapterPosition();
+                if (actionListener != null && pos != RecyclerView.NO_POSITION) {
+                    actionListener.onKillApp(app, pos);
                 }
             });
 
             binding.linear1.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onAppClick(app, getAdapterPosition());
+                int pos = getAdapterPosition();
+                if (actionListener != null && pos != RecyclerView.NO_POSITION) {
+                    actionListener.onAppClick(app, pos);
                 }
             });
 
             binding.linear1.setOnLongClickListener(v -> {
-                if (actionListener != null && !app.isProtected()) {
-                    actionListener.onToggleWhitelist(app, getAdapterPosition());
+                int pos = getAdapterPosition();
+                if (actionListener != null && !app.isProtected() && pos != RecyclerView.NO_POSITION) {
+                    actionListener.onToggleWhitelist(app, pos);
                     return true;
                 }
                 return false;

@@ -3,6 +3,7 @@ package com.northmendo.Appzuku;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -115,7 +116,7 @@ public class ShellManager {
         if (hasRoot == null) {
             // If called before check completes, do blocking check on current thread
             // This should only happen if called from background thread
-            if (!Thread.currentThread().getName().equals("main")) {
+            if (Looper.myLooper() != Looper.getMainLooper()) {
                 hasRoot = checkRootAccessBlocking();
             } else {
                 // On main thread, return false and let Shizuku be used

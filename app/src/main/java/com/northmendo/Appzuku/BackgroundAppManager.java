@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.SharedPreferences;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Toast;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -32,6 +33,7 @@ import static com.northmendo.Appzuku.PreferenceKeys.*;
 import static com.northmendo.Appzuku.AppConstants.*;
 
 public class BackgroundAppManager {
+    private static final String TAG = "BackgroundAppManager";
     private final Context context;
     private final Handler handler;
     private final ExecutorService executor;
@@ -383,7 +385,12 @@ public class BackgroundAppManager {
             for (String packageEntry : runningPackagesFromPs) {
                 String[] parts = packageEntry.split(":");
                 String packageName = parts[0];
-                long ramUsage = parts.length > 1 ? Long.parseLong(parts[1]) : 0;
+                long ramUsage = 0;
+                try {
+                    ramUsage = parts.length > 1 ? Long.parseLong(parts[1]) : 0;
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "Failed to parse RAM value for " + packageName, e);
+                }
 
                 try {
                     if (hiddenApps.contains(packageName)) {
@@ -452,8 +459,12 @@ public class BackgroundAppManager {
                         String[] parts = line.trim().split("\\s+");
                         if (parts.length >= 2) {
                             String packageName = parts[1].trim();
-                            long ramUsage = Long.parseLong(parts[0].trim());
-                            runningMap.put(packageName, ramUsage);
+                            try {
+                                long ramUsage = Long.parseLong(parts[0].trim());
+                                runningMap.put(packageName, ramUsage);
+                            } catch (NumberFormatException e) {
+                                Log.w(TAG, "Failed to parse RAM value for " + packageName, e);
+                            }
                         }
                     }
                 } catch (Exception ignored) {}
@@ -671,9 +682,14 @@ public class BackgroundAppManager {
         String command = packageNames.stream()
                 .map(pkg -> "am force-stop " + pkg)
                 .collect(Collectors.joining("; "));
-        shellManager.runShellCommand(command, onComplete);
-        String message = "Free up " + formatMemorySize(totalKb);
-        handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
+        final long finalTotalKb = totalKb;
+        shellManager.runShellCommand(command, () -> {
+            String message = "Free up " + formatMemorySize(finalTotalKb);
+            handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
+            if (onComplete != null) {
+                onComplete.run();
+            }
+        });
 
     }
 
@@ -692,14 +708,49 @@ public class BackgroundAppManager {
             }
             return;
         }
-        shellManager.runShellCommand("am force-stop " + packageName, onComplete);
+        // Find the app's RAM before killing
+        long appRamBytes = 0;
         for (AppModel app : currentAppsList) {
             if (app.getPackageName().equals(packageName)) {
-                String message = "Free up " + formatMemorySize(app.getAppRamBytes());
-                handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
+                appRamBytes = app.getAppRamBytes();
                 break;
             }
         }
+        final long finalAppRamBytes = appRamBytes;
+        shellManager.runShellCommand("am force-stop " + packageName, () -> {
+            if (finalAppRamBytes > 0) {
+                String message = "Free up " + formatMemorySize(finalAppRamBytes);
+                handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_LONG).show());
+            }
+            if (onComplete != null) {
+                onComplete.run();
+            }
+        });
+    }
+
+    // Uninstall an app using shell command
+    public void uninstallPackage(String packageName, Runnable onComplete) {
+        if (!shellManager.hasAnyShellPermission()) {
+            shellManager.checkShellPermissions();
+            if (onComplete != null) {
+                handler.post(onComplete);
+            }
+            return;
+        }
+        if (packageName == null || packageName.isEmpty()) {
+            if (onComplete != null) {
+                handler.post(onComplete);
+            }
+            return;
+        }
+
+        String command = "pm uninstall " + packageName;
+        shellManager.runShellCommand(command, () -> {
+            handler.post(() -> Toast.makeText(context, "Uninstall command sent for " + packageName, Toast.LENGTH_SHORT).show());
+            if (onComplete != null) {
+                onComplete.run();
+            }
+        });
     }
 
     // Toggle visibility of system apps

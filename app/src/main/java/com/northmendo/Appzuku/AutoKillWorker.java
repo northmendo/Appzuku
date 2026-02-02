@@ -27,7 +27,6 @@ public class AutoKillWorker extends Worker {
     public Result doWork() {
         SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
 
-        // Fixed: Default should be false to match SettingsActivity
         if (!prefs.getBoolean(KEY_AUTO_KILL_ENABLED, false)) {
             return Result.success();
         }

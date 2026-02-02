@@ -15,6 +15,8 @@ public abstract class AppDatabase extends RoomDatabase {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
                     AppDatabase.class, "appzuku_db")
+                    // WARNING: This will destroy all user data (kill history, stats) on schema changes.
+                    // For production, consider implementing proper migrations instead.
                     .fallbackToDestructiveMigration()
                     .build();
         }

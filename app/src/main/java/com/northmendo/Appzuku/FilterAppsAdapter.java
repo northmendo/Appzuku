@@ -117,14 +117,19 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
         holder.appIcon.setImageDrawable(app.getAppIcon());
         holder.checkBox.setChecked(app.isSelected());
 
+        // Handle both checkbox clicks and row clicks uniformly
+        View.OnClickListener toggleListener = v -> {
+            boolean newState = !holder.checkBox.isChecked();
+            holder.checkBox.setChecked(newState);
+            app.setSelected(newState);
+        };
+
         holder.checkBox.setOnClickListener(v -> {
-            boolean isChecked = ((CheckBox) v).isChecked();
-            app.setSelected(isChecked);
+            // Checkbox already toggled visually, just update model
+            app.setSelected(holder.checkBox.isChecked());
         });
 
-        convertView.setOnClickListener(v -> {
-            holder.checkBox.performClick();
-        });
+        convertView.setOnClickListener(toggleListener);
 
         return convertView;
     }

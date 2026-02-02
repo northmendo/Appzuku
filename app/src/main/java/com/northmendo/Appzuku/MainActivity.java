@@ -221,13 +221,14 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showUninstallConfirmation(AppModel app) {
+        String message = "This will use shell commands (Shizuku/Root) to uninstall the app.\n\n" +
+                "Note: System apps may not be uninstallable on all devices.";
+
         new AlertDialog.Builder(this)
                 .setTitle("Uninstall " + app.getAppName())
-                .setMessage("Are you sure you want to uninstall this app?")
+                .setMessage(message)
                 .setPositiveButton("Uninstall", (dialog, which) -> {
-                    Intent intent = new Intent(Intent.ACTION_DELETE);
-                    intent.setData(Uri.parse("package:" + app.getPackageName()));
-                    startActivity(intent);
+                    appManager.uninstallPackage(app.getPackageName(), this::loadBackgroundApps);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -287,7 +288,7 @@ public class MainActivity extends BaseActivity {
                 break;
         }
 
-        listAdapter.notifyDataSetChanged();
+        listAdapter.submitList(new ArrayList<>(appsDataList));
         Toast.makeText(this, wasInList ? removedMsg : addedMsg, Toast.LENGTH_SHORT).show();
     }
 
@@ -382,7 +383,7 @@ public class MainActivity extends BaseActivity {
                 app.setSelected(true);
             }
         }
-        listAdapter.notifyDataSetChanged();
+        listAdapter.submitList(new ArrayList<>(appsDataList));
         updateSelectMenuVisibility();
     }
 
@@ -390,7 +391,7 @@ public class MainActivity extends BaseActivity {
         for (AppModel app : fullAppsList) {
             app.setSelected(false);
         }
-        listAdapter.notifyDataSetChanged();
+        listAdapter.submitList(new ArrayList<>(appsDataList));
         updateSelectMenuVisibility();
     }
 

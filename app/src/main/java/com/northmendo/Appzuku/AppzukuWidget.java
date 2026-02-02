@@ -5,9 +5,12 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.RemoteViews;
 
 public class AppzukuWidget extends AppWidgetProvider {
+    private static final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -43,7 +46,7 @@ public class AppzukuWidget extends AppWidgetProvider {
                 views.setTextViewText(R.id.widget_ram_text,
                         "RAM: " + (totalRam - availableRam) + "MB / " + totalRam + "MB");
             }
-            appWidgetManager.updateAppWidget(appWidgetId, views);
+            handler.post(() -> appWidgetManager.updateAppWidget(appWidgetId, views));
         }).start();
     }
 }
