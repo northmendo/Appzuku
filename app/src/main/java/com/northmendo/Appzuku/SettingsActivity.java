@@ -1152,10 +1152,20 @@ public class SettingsActivity extends BaseActivity {
                 boolean success = backupManager.restoreBackupJson(sb.toString());
                 handler.post(() -> {
                     if (success) {
-                        applyAutomationStateFromPreferences();
-                        loadSettings();
-                        updateKillModeVisibility();
-                        Toast.makeText(this, "Restore successful", Toast.LENGTH_SHORT).show();
+                        Runnable finishRestore = () -> {
+                            applyAutomationStateFromPreferences();
+                            loadSettings();
+                            updateKillModeVisibility();
+                            Toast.makeText(this, "Restore successful", Toast.LENGTH_SHORT).show();
+                        };
+
+                        if (appManager.supportsBackgroundRestriction()) {
+                            Set<String> restoredRestrictedApps = new java.util.HashSet<>(
+                                    sharedPreferences.getStringSet(KEY_AUTOSTART_DISABLED_APPS, new java.util.HashSet<>()));
+                            appManager.applyBackgroundRestriction(restoredRestrictedApps, finishRestore);
+                        } else {
+                            finishRestore.run();
+                        }
                     } else {
                         Toast.makeText(this, "Restore failed: Invalid data", Toast.LENGTH_SHORT).show();
                     }
