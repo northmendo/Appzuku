@@ -203,14 +203,24 @@ public class ShellManager {
      * This method is blocking and should only be called from a background thread.
      */
     public boolean runShellCommandBlocking(String command) {
-        boolean succeeded = false;
+        return runShellCommandForResult(command).succeeded();
+    }
+
+    public ShellResult runShellCommandForResult(String command) {
+        ShellResult rootResult = null;
         if (hasRootAccess()) {
-            succeeded = executeRootCommand(command, null);
+            rootResult = executeRootCommandForResult(command);
+            if (rootResult.succeeded()) {
+                return rootResult;
+            }
         }
-        if (!succeeded && hasShizukuPermission()) {
-            succeeded = executeShizukuCommand(command);
+        if (hasShizukuPermission()) {
+            ShellResult shizukuResult = executeShizukuCommandForResult(command);
+            if (shizukuResult.succeeded() || rootResult == null) {
+                return shizukuResult;
+            }
         }
-        return succeeded;
+        return rootResult != null ? rootResult : new ShellResult(false, -1, "No Root or Shizuku permission available");
     }
 
     /**
@@ -318,6 +328,50 @@ public class ShellManager {
         }
     }
 
+    private ShellResult executeRootCommandForResult(String command) {
+        Process process = null;
+        DataOutputStream os = null;
+        StringBuilder output = new StringBuilder();
+        try {
+            process = Runtime.getRuntime().exec("su");
+            os = new DataOutputStream(process.getOutputStream());
+            os.writeBytes(command + "\n");
+            os.writeBytes("exit\n");
+            os.flush();
+
+            try (BufferedReader readerInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = readerInput.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                while ((line = errorReader.readLine()) != null) {
+                    output.append("ERROR: ").append(line).append("\n");
+                }
+            }
+
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                Log.w(TAG, "Root command exited with code " + exitCode + ": " + command);
+            }
+            return new ShellResult(exitCode == 0, exitCode, output.toString());
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            Log.e(TAG, "Root command failed", e);
+            return new ShellResult(false, -1, e.getMessage());
+        } finally {
+            try {
+                if (os != null)
+                    os.close();
+                if (process != null)
+                    process.destroy();
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
     private boolean executeShizukuCommandWithOutput(String command, Consumer<String> outputProcessor) {
         ShizukuRemoteProcess remote = null;
         try {
@@ -419,6 +473,63 @@ public class ShellManager {
             if (remote != null) {
                 remote.destroy();
             }
+        }
+    }
+
+    private ShellResult executeShizukuCommandForResult(String command) {
+        ShizukuRemoteProcess remote = null;
+        StringBuilder output = new StringBuilder();
+        try {
+            remote = Shizuku.newProcess(new String[] { "sh", "-c", command }, null, "/");
+            try (BufferedReader readerInput = new BufferedReader(new InputStreamReader(remote.getInputStream()));
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(remote.getErrorStream()))) {
+                String line;
+                while ((line = readerInput.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                while ((line = errorReader.readLine()) != null) {
+                    output.append("ERROR: ").append(line).append("\n");
+                }
+            }
+            int exitCode = remote.waitFor();
+            if (exitCode != 0) {
+                Log.w(TAG, "Shizuku command exited with code " + exitCode + ": " + command);
+            }
+            return new ShellResult(exitCode == 0, exitCode, output.toString());
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            Log.e(TAG, "Shizuku command failed", e);
+            return new ShellResult(false, -1, e.getMessage());
+        } finally {
+            if (remote != null) {
+                remote.destroy();
+            }
+        }
+    }
+
+    public static final class ShellResult {
+        private final boolean succeeded;
+        private final int exitCode;
+        private final String output;
+
+        private ShellResult(boolean succeeded, int exitCode, String output) {
+            this.succeeded = succeeded;
+            this.exitCode = exitCode;
+            this.output = output == null ? "" : output.trim();
+        }
+
+        public boolean succeeded() {
+            return succeeded;
+        }
+
+        public int exitCode() {
+            return exitCode;
+        }
+
+        public String output() {
+            return output;
         }
     }
 }

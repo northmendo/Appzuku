@@ -38,6 +38,7 @@ public class BackgroundAppManager {
     private static final String TAG = "BackgroundAppManager";
     private static final String BACKGROUND_RESTRICTION_OP = "RUN_ANY_IN_BACKGROUND";
     private static final Pattern PACKAGE_NAME_PATTERN = Pattern.compile("[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+");
+    private static final String FORCE_STOP_COMMAND_PREFIX = "am force-stop ";
     private final Context context;
     private final Handler handler;
     private final ExecutorService executor;
@@ -63,8 +64,11 @@ public class BackgroundAppManager {
         executor.execute(() -> {
             PackageManager pm = context.getPackageManager();
             List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
-            Set<String> restrictedPackages = getActualBackgroundRestrictedApps();
-            saveBackgroundRestrictedApps(restrictedPackages);
+            BackgroundRestrictionState state = getBackgroundRestrictionState();
+            Set<String> restrictedPackages = state.restrictedPackages;
+            if (state.querySucceeded) {
+                saveBackgroundRestrictedApps(restrictedPackages);
+            }
             List<AppModel> result = new ArrayList<>();
             for (ApplicationInfo appInfo : packages) {
                 String packageName = appInfo.packageName;
@@ -504,6 +508,7 @@ public class BackgroundAppManager {
 
     public void applyBackgroundRestriction(Set<String> targetPackages, Runnable onComplete) {
         if (!supportsBackgroundRestriction()) {
+            BackgroundRestrictionLog.log(context, null, "apply", "skipped", "Android 11+ required");
             Toast.makeText(context, "Background restriction requires Android 11+", Toast.LENGTH_SHORT).show();
             if (onComplete != null) {
                 handler.post(onComplete);
@@ -511,6 +516,7 @@ public class BackgroundAppManager {
             return;
         }
         if (!shellManager.hasAnyShellPermission()) {
+            BackgroundRestrictionLog.log(context, null, "apply", "failed", "No Root or Shizuku permission available");
             shellManager.checkShellPermissions();
             if (onComplete != null) {
                 handler.post(onComplete);
@@ -537,23 +543,40 @@ public class BackgroundAppManager {
 
             boolean success = true;
             for (String packageName : packagesToAllow) {
-                if (!shellManager.runShellCommandBlocking(buildBackgroundRestrictionCommand(packageName, "allow"))) {
+                ShellManager.ShellResult allowResult = shellManager
+                        .runShellCommandForResult(buildBackgroundRestrictionCommand(packageName, "allow"));
+                if (!allowResult.succeeded()) {
                     success = false;
                 }
+                logRestrictionResult(packageName, "allow", allowResult, null);
             }
 
             for (String packageName : packagesToRestrict) {
-                if (!shellManager.runShellCommandBlocking(buildBackgroundRestrictionCommand(packageName, "ignore"))) {
+                ShellManager.ShellResult restrictResult = shellManager
+                        .runShellCommandForResult(buildBackgroundRestrictionCommand(packageName, "ignore"));
+                if (!restrictResult.succeeded()) {
                     success = false;
+                    logRestrictionResult(packageName, "restrict", restrictResult, null);
                     continue;
                 }
-                if (!shellManager.runShellCommandBlocking("am force-stop " + packageName)) {
+                ShellManager.ShellResult forceStopResult = shellManager.runShellCommandForResult(FORCE_STOP_COMMAND_PREFIX + packageName);
+                if (!forceStopResult.succeeded()) {
                     success = false;
                 }
+                logRestrictionResult(packageName, "restrict", restrictResult, forceStopResult);
             }
 
-            Set<String> actualPackages = getActualBackgroundRestrictedApps();
-            saveBackgroundRestrictedApps(actualPackages);
+            BackgroundRestrictionState actualState = getBackgroundRestrictionState();
+            if (actualState.querySucceeded) {
+                saveBackgroundRestrictedApps(actualState.restrictedPackages);
+            }
+
+            for (String packageName : packagesToAllow) {
+                logRestrictionVerification(packageName, "allow", actualState, false);
+            }
+            for (String packageName : packagesToRestrict) {
+                logRestrictionVerification(packageName, "restrict", actualState, true);
+            }
 
             final boolean finalSuccess = success;
             handler.post(() -> {
@@ -573,9 +596,13 @@ public class BackgroundAppManager {
     }
 
     private Set<String> getActualBackgroundRestrictedApps() {
+        return getBackgroundRestrictionState().restrictedPackages;
+    }
+
+    private BackgroundRestrictionState getBackgroundRestrictionState() {
         Set<String> fallbackPackages = getBackgroundRestrictedApps();
         if (!supportsBackgroundRestriction() || !shellManager.hasAnyShellPermission()) {
-            return fallbackPackages;
+            return new BackgroundRestrictionState(fallbackPackages, false);
         }
 
         Set<String> restrictedPackages = new HashSet<>();
@@ -595,7 +622,7 @@ public class BackgroundAppManager {
             mergeBackgroundRestrictedPackages(restrictedPackages, denyOutput);
         }
 
-        return querySucceeded ? restrictedPackages : fallbackPackages;
+        return new BackgroundRestrictionState(querySucceeded ? restrictedPackages : fallbackPackages, querySucceeded);
     }
 
     private void mergeBackgroundRestrictedPackages(Set<String> packages, String output) {
@@ -606,6 +633,65 @@ public class BackgroundAppManager {
         Matcher matcher = PACKAGE_NAME_PATTERN.matcher(output);
         while (matcher.find()) {
             packages.add(matcher.group());
+        }
+    }
+
+    private void logRestrictionResult(String packageName, String action,
+            ShellManager.ShellResult appOpsResult, ShellManager.ShellResult forceStopResult) {
+        StringBuilder detail = new StringBuilder()
+                .append("appops=")
+                .append(formatShellOutcome(appOpsResult));
+        if (forceStopResult != null) {
+            detail.append(" force-stop=").append(formatShellOutcome(forceStopResult));
+        }
+        String outcome = appOpsResult != null && appOpsResult.succeeded()
+                && (forceStopResult == null || forceStopResult.succeeded())
+                        ? "ok"
+                        : "failed";
+        BackgroundRestrictionLog.log(context, packageName, action, outcome, detail.toString());
+    }
+
+    private void logRestrictionVerification(String packageName, String action, BackgroundRestrictionState state,
+            boolean desiredRestricted) {
+        if (!state.querySucceeded) {
+            BackgroundRestrictionLog.log(context, packageName, action, "verify-unavailable", "AppOps query failed");
+            return;
+        }
+        boolean isRestricted = state.restrictedPackages.contains(packageName);
+        BackgroundRestrictionLog.log(context, packageName, action,
+                desiredRestricted == isRestricted ? "verified" : "verify-failed",
+                "expected=" + (desiredRestricted ? "restricted" : "allowed")
+                        + " actual=" + (isRestricted ? "restricted" : "allowed"));
+    }
+
+    private String formatShellOutcome(ShellManager.ShellResult result) {
+        if (result == null) {
+            return "n/a";
+        }
+        StringBuilder detail = new StringBuilder(result.succeeded() ? "ok" : "failed");
+        if (!result.output().isEmpty()) {
+            detail.append("[").append(result.output()).append("]");
+        } else if (!result.succeeded() && result.exitCode() >= 0) {
+            detail.append("[exit=").append(result.exitCode()).append("]");
+        }
+        return detail.toString();
+    }
+
+    public String getBackgroundRestrictionLogText() {
+        return BackgroundRestrictionLog.readDisplayText(context);
+    }
+
+    public void clearBackgroundRestrictionLog() {
+        BackgroundRestrictionLog.clear(context);
+    }
+
+    private static final class BackgroundRestrictionState {
+        private final Set<String> restrictedPackages;
+        private final boolean querySucceeded;
+
+        private BackgroundRestrictionState(Set<String> restrictedPackages, boolean querySucceeded) {
+            this.restrictedPackages = restrictedPackages;
+            this.querySucceeded = querySucceeded;
         }
     }
 

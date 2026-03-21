@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +23,7 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.os.Handler;
@@ -239,6 +241,9 @@ public class SettingsActivity extends BaseActivity {
         binding.layoutBackgroundRestriction.setVisibility(
                 appManager.supportsBackgroundRestriction() ? View.VISIBLE : View.GONE);
         binding.layoutBackgroundRestriction.setOnClickListener(v -> showBackgroundRestrictionDialog());
+        binding.layoutRestrictionLog.setVisibility(
+                appManager.supportsBackgroundRestriction() ? View.VISIBLE : View.GONE);
+        binding.layoutRestrictionLog.setOnClickListener(v -> showBackgroundRestrictionLogDialog());
 
         // Kill Mode
         binding.layoutKillMode.setOnClickListener(v -> showKillModeDialog());
@@ -1162,6 +1167,40 @@ public class SettingsActivity extends BaseActivity {
                 Log.e(TAG, "Import failed", e);
                 handler.post(() -> Toast.makeText(this, "Import failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
+        });
+    }
+
+    private void showBackgroundRestrictionLogDialog() {
+        ScrollView scrollView = new ScrollView(this);
+        int padding = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 20, getResources().getDisplayMetrics());
+        scrollView.setPadding(padding, padding, padding, padding);
+
+        TextView logView = new TextView(this);
+        logView.setText(appManager.getBackgroundRestrictionLogText());
+        logView.setTextIsSelectable(true);
+        logView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        logView.setTypeface(android.graphics.Typeface.MONOSPACE);
+        logView.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        scrollView.addView(logView);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Restriction Log")
+                .setView(scrollView)
+                .setNegativeButton("Close", null)
+                .setNeutralButton("Clear", null)
+                .create();
+        dialog.getWindow().setBackgroundDrawable(
+                new ColorDrawable(ContextCompat.getColor(this, R.color.background_primary)));
+        dialog.show();
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                .setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+                .setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+            appManager.clearBackgroundRestrictionLog();
+            logView.setText(appManager.getBackgroundRestrictionLogText());
+            Toast.makeText(this, "Restriction log cleared", Toast.LENGTH_SHORT).show();
         });
     }
 
