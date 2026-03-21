@@ -105,6 +105,7 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
             convertView = inflater.inflate(R.layout.item_filter_app, parent, false);
             holder = new ViewHolder();
             holder.appName = convertView.findViewById(R.id.filter_app_name);
+            holder.appStatus = convertView.findViewById(R.id.filter_app_status);
             holder.appIcon = convertView.findViewById(R.id.filter_app_icon);
             holder.checkBox = convertView.findViewById(R.id.filter_app_checkbox);
             convertView.setTag(holder);
@@ -114,6 +115,13 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
 
         AppModel app = getItem(position);
         holder.appName.setText(app.getAppName());
+        String statusText = app.getBackgroundRestrictionStatusText();
+        if (statusText.isEmpty()) {
+            holder.appStatus.setVisibility(View.GONE);
+        } else {
+            holder.appStatus.setVisibility(View.VISIBLE);
+            holder.appStatus.setText(statusText);
+        }
         holder.appIcon.setImageDrawable(app.getAppIcon());
         holder.checkBox.setChecked(app.isSelected());
 
@@ -200,6 +208,7 @@ public class FilterAppsAdapter extends BaseAdapter implements Filterable {
 
     public static class ViewHolder {
         public TextView appName;
+        public TextView appStatus;
         public ImageView appIcon;
         public CheckBox checkBox;
     }

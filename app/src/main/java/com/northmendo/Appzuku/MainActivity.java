@@ -180,10 +180,10 @@ public class MainActivity extends BaseActivity {
                 appManager.getBlacklistedApps().contains(packageName));
         popup.getMenu().findItem(R.id.action_hidden).setChecked(
                 appManager.getHiddenApps().contains(packageName));
-        popup.getMenu().findItem(R.id.action_background_restriction).setVisible(
-                appManager.supportsBackgroundRestriction());
-        popup.getMenu().findItem(R.id.action_background_restriction).setChecked(
-                appManager.getBackgroundRestrictedApps().contains(packageName));
+        MenuItem restrictionItem = popup.getMenu().findItem(R.id.action_background_restriction);
+        restrictionItem.setVisible(appManager.supportsBackgroundRestriction());
+        restrictionItem.setChecked(app.isBackgroundRestrictionDesired());
+        restrictionItem.setTitle(getBackgroundRestrictionMenuTitle(app));
 
         popup.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
@@ -287,7 +287,15 @@ public class MainActivity extends BaseActivity {
     }
 
     private void toggleBackgroundRestriction(AppModel app) {
-        boolean enableRestriction = !appManager.getBackgroundRestrictedApps().contains(app.getPackageName());
+        if (app.needsBackgroundRestrictionReapply()) {
+            showOutOfSyncRestrictionDialog(app);
+            return;
+        }
+        if (app.isBackgroundRestrictionExternal()) {
+            showExternalRestrictionDialog(app);
+            return;
+        }
+        boolean enableRestriction = !app.isBackgroundRestrictionDesired();
         if (enableRestriction && app.isSystemApp()) {
             new AlertDialog.Builder(this)
                     .setTitle("System App Warning")
@@ -300,8 +308,43 @@ public class MainActivity extends BaseActivity {
         applyBackgroundRestriction(app, enableRestriction);
     }
 
+    private void showOutOfSyncRestrictionDialog(AppModel app) {
+        new AlertDialog.Builder(this)
+                .setTitle("Background Restriction Out of Sync")
+                .setMessage(app.getAppName()
+                        + " is still on Appzuku's saved restriction list, but Android is not currently restricting it.\n\nRe-apply the restriction or remove it from Appzuku's list?")
+                .setPositiveButton("Re-apply", (dialog, which) -> applyBackgroundRestriction(app, true))
+                .setNeutralButton("Remove from List", (dialog, which) -> applyBackgroundRestriction(app, false))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showExternalRestrictionDialog(AppModel app) {
+        new AlertDialog.Builder(this)
+                .setTitle("Restricted Outside Appzuku")
+                .setMessage(app.getAppName()
+                        + " is currently restricted by Android, but it is not on Appzuku's saved list.\n\nAdd it to Appzuku or remove the current restriction?")
+                .setPositiveButton("Add to Appzuku", (dialog, which) -> applyBackgroundRestriction(app, true))
+                .setNeutralButton("Remove Restriction", (dialog, which) -> applyBackgroundRestriction(app, false))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private void applyBackgroundRestriction(AppModel app, boolean enableRestriction) {
         appManager.setBackgroundRestricted(app.getPackageName(), enableRestriction, this::loadBackgroundApps);
+    }
+
+    private String getBackgroundRestrictionMenuTitle(AppModel app) {
+        if (app.needsBackgroundRestrictionReapply()) {
+            return "Background Restriction (Out of Sync)";
+        }
+        if (app.isBackgroundRestrictionExternal()) {
+            return "Background Restriction (External)";
+        }
+        if (app.isBackgroundRestrictionDesired() && !app.isBackgroundRestrictionActualKnown()) {
+            return "Background Restriction (Saved)";
+        }
+        return "Background Restriction";
     }
 
     // Load background apps with selection preservation

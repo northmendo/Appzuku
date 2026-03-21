@@ -13,7 +13,9 @@ public class AppModel {
     private boolean selected;
     private boolean isProtected;
     private boolean isWhitelisted;
-    private boolean backgroundRestricted;
+    private boolean backgroundRestrictionDesired;
+    private boolean backgroundRestrictionActual;
+    private boolean backgroundRestrictionActualKnown;
 
     // Initialize app model
     public AppModel(String appName, String packageName, String appRam, long appRamBytes, Drawable appIcon,
@@ -28,15 +30,66 @@ public class AppModel {
         this.isProtected = isProtected;
         this.selected = false;
         this.isWhitelisted = false;
-        this.backgroundRestricted = false;
+        this.backgroundRestrictionDesired = false;
+        this.backgroundRestrictionActual = false;
+        this.backgroundRestrictionActualKnown = false;
     }
 
     public boolean isBackgroundRestricted() {
-        return backgroundRestricted;
+        return backgroundRestrictionDesired;
     }
 
     public void setBackgroundRestricted(boolean backgroundRestricted) {
-        this.backgroundRestricted = backgroundRestricted;
+        this.backgroundRestrictionDesired = backgroundRestricted;
+    }
+
+    public boolean isBackgroundRestrictionDesired() {
+        return backgroundRestrictionDesired;
+    }
+
+    public void setBackgroundRestrictionDesired(boolean backgroundRestrictionDesired) {
+        this.backgroundRestrictionDesired = backgroundRestrictionDesired;
+    }
+
+    public boolean isBackgroundRestrictionActual() {
+        return backgroundRestrictionActual;
+    }
+
+    public void setBackgroundRestrictionActual(boolean backgroundRestrictionActual) {
+        this.backgroundRestrictionActual = backgroundRestrictionActual;
+    }
+
+    public boolean isBackgroundRestrictionActualKnown() {
+        return backgroundRestrictionActualKnown;
+    }
+
+    public void setBackgroundRestrictionActualKnown(boolean backgroundRestrictionActualKnown) {
+        this.backgroundRestrictionActualKnown = backgroundRestrictionActualKnown;
+    }
+
+    public boolean isBackgroundRestrictionOutOfSync() {
+        return backgroundRestrictionActualKnown && backgroundRestrictionDesired != backgroundRestrictionActual;
+    }
+
+    public boolean isBackgroundRestrictionExternal() {
+        return backgroundRestrictionActualKnown && !backgroundRestrictionDesired && backgroundRestrictionActual;
+    }
+
+    public boolean needsBackgroundRestrictionReapply() {
+        return backgroundRestrictionActualKnown && backgroundRestrictionDesired && !backgroundRestrictionActual;
+    }
+
+    public String getBackgroundRestrictionStatusText() {
+        if (!backgroundRestrictionActualKnown) {
+            return backgroundRestrictionDesired ? "Saved in Appzuku" : "";
+        }
+        if (isBackgroundRestrictionExternal()) {
+            return "Restricted outside Appzuku";
+        }
+        if (needsBackgroundRestrictionReapply()) {
+            return "Saved in Appzuku, not active";
+        }
+        return "";
     }
 
     // Get and set app name

@@ -68,11 +68,8 @@ public class BackgroundAppManager {
         executor.execute(() -> {
             PackageManager pm = context.getPackageManager();
             List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+            Set<String> desiredPackages = getBackgroundRestrictedApps();
             BackgroundRestrictionState state = getBackgroundRestrictionState();
-            Set<String> restrictedPackages = state.restrictedPackages;
-            if (state.querySucceeded) {
-                saveBackgroundRestrictedApps(restrictedPackages);
-            }
             List<AppModel> result = new ArrayList<>();
             for (ApplicationInfo appInfo : packages) {
                 String packageName = appInfo.packageName;
@@ -89,7 +86,7 @@ public class BackgroundAppManager {
                         (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0,
                         (appInfo.flags & ApplicationInfo.FLAG_PERSISTENT) != 0,
                         ProtectedApps.isProtected(context, packageName));
-                model.setBackgroundRestricted(restrictedPackages.contains(packageName));
+                applyBackgroundRestrictionState(model, desiredPackages, state);
                 result.add(model);
             }
 
@@ -252,6 +249,8 @@ public class BackgroundAppManager {
             Set<String> runningPackagesFromPs = new HashSet<>();
             Set<String> hiddenApps = getHiddenApps();
             Set<String> whitelistedApps = getWhitelistedApps();
+            Set<String> desiredBackgroundRestrictedApps = getBackgroundRestrictedApps();
+            BackgroundRestrictionState backgroundRestrictionState = getBackgroundRestrictionState();
 
             // Execute shell command to get running processes
             if (shellManager.hasAnyShellPermission()) {
@@ -327,6 +326,7 @@ public class BackgroundAppManager {
                             isProtected);
                     // Set whitelist status
                     appModel.setWhitelisted(whitelistedApps.contains(packageName));
+                    applyBackgroundRestrictionState(appModel, desiredBackgroundRestrictedApps, backgroundRestrictionState);
                     result.add(appModel);
                 } catch (PackageManager.NameNotFoundException ignored) {
                 }
@@ -511,6 +511,9 @@ public class BackgroundAppManager {
     }
 
     public void applyBackgroundRestriction(Set<String> targetPackages, Runnable onComplete) {
+        Set<String> desiredPackages = sanitizeBackgroundRestrictionTargets(targetPackages);
+        saveBackgroundRestrictedApps(desiredPackages);
+
         if (!supportsBackgroundRestriction()) {
             BackgroundRestrictionLog.log(context, null, "apply", "skipped", "Android 11+ required");
             Toast.makeText(context, "Background restriction requires Android 11+", Toast.LENGTH_SHORT).show();
@@ -529,15 +532,6 @@ public class BackgroundAppManager {
         }
 
         executor.execute(() -> {
-            Set<String> desiredPackages = new HashSet<>();
-            if (targetPackages != null) {
-                for (String packageName : targetPackages) {
-                    if (packageName != null && !packageName.isEmpty() && !packageName.equals(context.getPackageName())) {
-                        desiredPackages.add(packageName);
-                    }
-                }
-            }
-
             Set<String> currentPackages = getActualBackgroundRestrictedApps();
             Set<String> packagesToAllow = new HashSet<>(currentPackages);
             packagesToAllow.removeAll(desiredPackages);
@@ -571,10 +565,6 @@ public class BackgroundAppManager {
             }
 
             BackgroundRestrictionState actualState = getBackgroundRestrictionState();
-            if (actualState.querySucceeded) {
-                saveBackgroundRestrictedApps(actualState.restrictedPackages);
-            }
-
             for (String packageName : packagesToAllow) {
                 logRestrictionVerification(packageName, "allow", actualState, false);
             }
@@ -597,6 +587,10 @@ public class BackgroundAppManager {
 
     private String buildBackgroundRestrictionCommand(String packageName, String mode) {
         return "cmd appops set --user current " + packageName + " " + BACKGROUND_RESTRICTION_OP + " " + mode;
+    }
+
+    public void reapplySavedBackgroundRestrictions(Runnable onComplete) {
+        applyBackgroundRestriction(getBackgroundRestrictedApps(), onComplete);
     }
 
     private Set<String> getActualBackgroundRestrictedApps() {
@@ -638,6 +632,31 @@ public class BackgroundAppManager {
         while (matcher.find()) {
             packages.add(matcher.group());
         }
+    }
+
+    private void applyBackgroundRestrictionState(AppModel model, Set<String> desiredPackages,
+            BackgroundRestrictionState actualState) {
+        boolean desired = desiredPackages.contains(model.getPackageName());
+        model.setBackgroundRestrictionDesired(desired);
+        model.setBackgroundRestrictionActualKnown(actualState.querySucceeded);
+        if (actualState.querySucceeded) {
+            model.setBackgroundRestrictionActual(actualState.restrictedPackages.contains(model.getPackageName()));
+        } else {
+            model.setBackgroundRestrictionActual(desired);
+        }
+    }
+
+    private Set<String> sanitizeBackgroundRestrictionTargets(Set<String> targetPackages) {
+        Set<String> desiredPackages = new HashSet<>();
+        if (targetPackages == null) {
+            return desiredPackages;
+        }
+        for (String packageName : targetPackages) {
+            if (packageName != null && !packageName.isEmpty() && !packageName.equals(context.getPackageName())) {
+                desiredPackages.add(packageName);
+            }
+        }
+        return desiredPackages;
     }
 
     private void logRestrictionResult(String packageName, String action,

@@ -242,6 +242,16 @@ public class SettingsActivity extends BaseActivity {
         binding.layoutBackgroundRestriction.setVisibility(
                 appManager.supportsBackgroundRestriction() ? View.VISIBLE : View.GONE);
         binding.layoutBackgroundRestriction.setOnClickListener(v -> showBackgroundRestrictionDialog());
+        binding.layoutReapplyRestrictions.setVisibility(
+                appManager.supportsBackgroundRestriction() ? View.VISIBLE : View.GONE);
+        binding.layoutReapplyRestrictions.setOnClickListener(v -> {
+            Set<String> savedRestrictions = appManager.getBackgroundRestrictedApps();
+            if (savedRestrictions.isEmpty()) {
+                Toast.makeText(this, "No saved background restrictions to re-apply", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            appManager.reapplySavedBackgroundRestrictions(null);
+        });
 
         // Kill Mode
         binding.layoutKillMode.setOnClickListener(v -> showKillModeDialog());
@@ -972,12 +982,8 @@ public class SettingsActivity extends BaseActivity {
         restrictionDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(this, R.color.dialog_button_text));
 
         appManager.loadBackgroundRestrictionApps(allApps -> {
-            Set<String> restrictedApps = appManager.getBackgroundRestrictedApps();
-            for (AppModel app : allApps) {
-                app.setBackgroundRestricted(restrictedApps.contains(app.getPackageName()));
-            }
-
-            FilterAppsAdapter filterAdapter = new FilterAppsAdapter(this, allApps, restrictedApps);
+            Set<String> desiredRestrictedApps = appManager.getBackgroundRestrictedApps();
+            FilterAppsAdapter filterAdapter = new FilterAppsAdapter(this, allApps, desiredRestrictedApps);
             listView.setAdapter(filterAdapter);
             listView.setOnItemClickListener(null);
 
@@ -1010,9 +1016,9 @@ public class SettingsActivity extends BaseActivity {
 
             restrictionDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Save", (dialog, which) -> {
                 Set<String> targetPackages = filterAdapter.getSelectedPackages();
-                Set<String> currentRestricted = new java.util.HashSet<>(restrictedApps);
+                Set<String> currentDesired = new java.util.HashSet<>(desiredRestrictedApps);
                 Set<String> packagesToRestrict = new java.util.HashSet<>(targetPackages);
-                packagesToRestrict.removeAll(currentRestricted);
+                packagesToRestrict.removeAll(currentDesired);
 
                 // Count system apps in selection
                 int systemAppCount = 0;
